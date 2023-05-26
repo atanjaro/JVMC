@@ -4,5 +4,5 @@ This package implements the Variational Monte Carlo (VMC) method for Hubbard, an
 
 Modules are currently in the developmental phase and are highly experimental.
 
-A notable dependency is the 'LatticeUtilities' package (https://github.com/cohensbw/LatticeUtilities.jl/tree/master/src).
+A notable dependency is the 'LatticeUtilities' package (https://github.com/cohensbw/LatticeUtilities.jl/).
 
