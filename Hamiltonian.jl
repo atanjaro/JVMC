@@ -12,10 +12,13 @@ using Test
 # export build_slater_determinant
 
 
-# ModelGeometry( unit_cell::UnitCell, lattice::Lattice )
-#
-# A type defining model geometry.
-#
+
+"""
+    ModelGeometry( unit_cell::UnitCell, lattice::Lattice )
+
+A type defining model geometry
+
+"""
 struct ModelGeometry
     # unit cell
     unit_cell::UnitCell
@@ -24,11 +27,13 @@ struct ModelGeometry
 end
 
 
-# TightBindingModel( t::Vector{AbstractFloat}, μ::AbstractFloat, 
-#                    model_geometry::ModelGeometry, nbr_table::Matrix{Int64} )
-#
-# A type defining a non-interacting tight binding model.
-#
+"""
+    TightBindingModel( t::Vector{AbstractFloat}, μ::AbstractFloat, 
+                    model_geometry::ModelGeometry, nbr_table::Matrix{Int64} )
+
+A type defining a non-interacting tight binding model
+
+"""
 struct TightBindingModel
     # hopping amplitudes
     t::Vector{AbstractFloat}   # [t, t']
@@ -37,28 +42,13 @@ struct TightBindingModel
 end
 
 
-# DeterminantalState( ε::Vector{AbstractFloat}, U::Matrix{AbstractFloat}, 
-#        M::Matrix{AbstractFloat}, D::Matrix{AbstractFloat} )
-#
-# A type defining a Slater determinant state.
-#
-# struct DeterminantalState
-#     # Slater determinant 
-#     D::Matrix{AbstractFloat}
-#     # Np lowest energies
-#     ε::Vector{AbstractFloat}
-#     # Np lowest eigenstates
-#     M::Matrix{AbstractFloat}
-#     # matrix of 2L eigenvectors
-#     U::Matrix{AbstractFloat}
-# end
+"""
+    VariationalParameters( pars::Vector{AbstractString}, 
+                        vals::Vector{AbstractFloat}, opts::Vector{Bool} )
 
+A type defining a set of variational parameters.
 
-# VariationalParameters( pars::Vector{AbstractString}, 
-#                        vals::Vector{AbstractFloat}, opts::Vector{Bool} )
-#
-# A type defining a set of variational parameters
-#
+"""
 struct VariationalParameters
     # name of order parameter
     pars::Vector{AbstractString}
@@ -69,12 +59,15 @@ struct VariationalParameters
 end
 
 
-# build_tight_binding_model( tight_binding_model::TightBindingModel )
-#
-# Constructs a 2⋅n⋅N × 2⋅n⋅N Hamiltonian matrix, where n is the
-# number of orbitals per unit cell and N is the number of lattice sites,
-# given tight binding parameters t, t', and μ.
-#
+
+"""
+    build_tight_binding_model( tight_binding_model::TightBindingModel ) 
+
+Constructs a 2⋅n⋅N by 2⋅n⋅N Hamiltonian matrix, where n is the
+number of orbitals per unit cell and N is the number of lattice sites,
+given tight binding parameters t, t', and μ.
+
+"""
 function build_tight_binding_model(tight_binding_model)
     dims = model_geometry.unit_cell.n*model_geometry.lattice.N
     nbr_table = build_neighbor_table(bonds[1],
@@ -215,12 +208,14 @@ function build_tight_binding_model(tight_binding_model)
 end
 
 
-# build_variational_terms( par::AbstractFloat )
-#
-# Constructs 2⋅n⋅N × 2⋅n⋅N matrices to be added to the non-interacting tight binding
-# Hamiltonian for each variational parameter. Returns a vector of the sum of 
-# matrices and a vector of individual matrix terms.
-#
+"""
+    build_variational_terms( variational_parameters::VariationalParameters ) 
+
+Constructs a 2⋅n⋅N by 2⋅n⋅N matrices to be added to the non-interacting tight binding
+Hamiltonian for each variational parameter. Returns a vector of the sum of
+matrices and a vector of individual matrix terms.
+
+"""
 function build_variational_terms(variational_parameters)
     dims = model_geometry.unit_cell.n*model_geometry.lattice.N
     vparam_map = map_variational_parameters(variational_parameters) 
@@ -345,11 +340,13 @@ function build_variational_terms(variational_parameters)
 end
 
 
-# map_variational_parameters( variational_parameters::VariationalParamters )
-#
-# For a given set of variational parameters, returns a dictionary of 
-# that reports the value and optimization flag for a given parameter.
-#
+"""
+    map_variational_parameters( variational_parameters::VariationalParamters ) 
+
+For a given set of variational parameters, returns a dictionary of 
+that reports the value and optimization flag for a given parameter.
+
+"""
 function map_variational_parameters(variational_parameters)
     vparam_map = Dict()
     for i in 1:length(variational_parameters.vals)
@@ -359,22 +356,25 @@ function map_variational_parameters(variational_parameters)
 end
 
 
-# build_mean_field_hamiltonian()
-#
-# Constructs a matrix by combining the non-interacting Hamiltonian with
-# matrix of variational terms.
-#
+"""
+    build_mean_field_hamiltonian() 
+
+Constructs a matrix by combining the non-interacting Hamiltonian with
+matrix of variational terms.
+
+"""
 function build_mean_field_hamiltonian()
     return build_tight_binding_model(tight_binding_model) + build_variational_terms(variational_parameters)[1]
 end
 
 
-# build_slater_determinant()
-#
-# Returns initial energies ε_init and 
-# matrix M and Slater matrix D in the many-particle configuration basis
-# with associated initial energies. 
-# 
+"""
+    build_slater_determinant() 
+
+Returns initial energies ε_init, matrix M, and Slater matrix D in 
+the many-particle configuration basis with associated initial energies. 
+
+"""
 function build_slater_determinant()
     # diagonalize Hamiltonian
     ε, U = diagonalize(H_mf) 
@@ -404,11 +404,13 @@ function build_slater_determinant()
 end
 
 
-# diagonalize( H_mf::Matrix{AbstractFloat} )
-#
-# Returns all eigenenergies and all eigenstates of the mean-field Hamiltonian, 
-# the latter being stored in the columns of a matrix. Convention: H(diag) = U⁺HU
-# 
+"""
+    diagonalize( H_mf::Matrix{AbstractFloat} ) 
+
+Returns all eigenenergies and all eigenstates of the mean-field Hamiltonian, 
+the latter being stored in the columns of a matrix. Convention: H(diag) = U⁺HU.
+
+"""
 function diagonalize(H_mf)
     # check if Hamiltonian is Hermitian
     @assert ishermitian(H_mf) == true
@@ -417,19 +419,23 @@ function diagonalize(H_mf)
 end
 
 
-# is_openshell( Np::Int, ε::Vector{AbstractFloat} )
-#
-# Checks whether configuration is open shell.
-#
+"""
+    is_openshell( Np::Int, ε::Vector{AbstractFloat} ) 
+
+Checks whether configuration is open shell.
+
+"""
 function is_openshell(ε, Np)
     return ε[Np + 1] - ε[Np] < 0.0001
 end
 
 
-# get_A_matrix( H_vpar::Matrix{AbstractFloat}, slater_determinant::Matrix{AbstractFloat} )
-#
-# Returns variational parameter A matrix.
-#
+"""
+    get_A_matrix( H_vpar::Matrix{AbstractFloat}, slater_determinant::Matrix{AbstractFloat} ) 
+    
+Returns variational parameter A matrix.
+
+"""
 function get_A_matrix(H_vpar)
     return adjoint(U)*adjoint(U)*H_vpar*U*U
 end

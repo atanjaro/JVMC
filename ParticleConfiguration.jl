@@ -2,11 +2,13 @@ using LatticeUtilities
 using Random
 
 
-# get_particle_numbers( density::{AbstractFloat} )
-#
-# Returns total number of particles, total number of electrons, and number of 
-# spin-up and spin-down electrons for lattice with N sites.
-#
+"""
+    get_particle_numbers( density::{AbstractFloat} ) 
+
+Returns total number of particles, total number of electrons, and number of 
+spin-up and spin-down electrons for lattice with N sites.
+
+"""
 function get_particle_numbers(density)
     # @assert ce = true
     Ne = density * model_geometry.lattice.N
@@ -29,12 +31,13 @@ function get_particle_numbers(density)
 end
 
 
-# get_particle_density( nup::Int, ndn::Int )
-#
-# Returns particle density given the number of 
-# spin-up and spin-down electrons on a lattice with N sites,
-# as well as total particle number and total number of electrons.
-#
+"""
+    get_particle_density( nup::Int, ndn::Int ) 
+
+Returns particle density given the number of spin-up and spin-down electrons 
+on a lattice with N sites, as well as total particle number and total number of electrons.
+
+"""
 function get_particle_density(nup, ndn)
     Ne = nup + ndn
     @assert Ne % 2 == 0
@@ -44,11 +47,12 @@ function get_particle_density(nup, ndn)
 end
 
 
+"""
+    generate_initial_configuration() 
 
-# generate_initial_configuration( nup::Int, Ne::Int ) 
-#
-# Returns a randomly generated initial configuration of electrons.
-#
+Returns a randomly generated initial configuration of electrons.
+
+"""
 function generate_initial_configuration()
     nbr_table = build_neighbor_table(bonds[1],
                                     model_geometry.unit_cell,
@@ -64,11 +68,12 @@ function generate_initial_configuration()
 end
 
 
-#
-# get_spindex_type(spindex::Int)
-#
-# Returns the spin species at a given spindex.
-#
+"""
+    get_spindex_type( spindex::Int ) 
+
+Returns the spin species at a given spindex.
+
+"""
 function get_spindex_type(spindex)
     @assert spindex < (2*model_geometry.lattice.N)+1
     if spindex < model_geometry.lattice.N+1
@@ -79,11 +84,12 @@ function get_spindex_type(spindex)
 end
 
 
+"""
+    get_index_from_spindex( spindex::Int ) 
 
-#    get_index_from_spindex( spindex::Int )
-#
-# Returns the lattice site i for a given spindex.
-#
+Returns the lattice site i for a given spindex.
+
+"""
 function get_index_from_spindex(spindex)
     @assert spindex < (2*model_geometry.lattice.N)+1
     if get_spindex_type(spindex) == 2
@@ -94,12 +100,13 @@ function get_index_from_spindex(spindex)
 end
 
 
+"""
+    number_operator( site::Int, pconfig::Vector{Int} )
 
-# number_operator(site::Int, pconfig::Vector{Int})
-#
-# Returns the number of spin-up and spin-down electrons 
-# occupying a real lattice site i.
-#
+Returns the number of spin-up and spin-down electrons 
+occupying a real lattice site i.  
+
+"""
 function number_operator(site, pconfig)
     return pconfig[site],                                           # number of spin-down electrons
          pconfig[site+model_geometry.lattice.N],                    # number of spin-down electrons
@@ -107,11 +114,13 @@ function number_operator(site, pconfig)
 end
 
 
+"""
+    get_particle_positions( pconfig::Vector{Int} )
 
-#    get_particle_positions( pconfig::Vector{Int} )
-#
-# Returns all particle positions in a dictionary with keys and values, "spindex" -> "lattice site".
-#
+Returns a dictionary of particle positions with keys and values,
+"spindex" -> "lattice site".
+
+"""
 function get_particle_positions(pconfig)
     particle_positions = Dict()
     for i in eachindex(pconfig)
@@ -125,11 +134,12 @@ function get_particle_positions(pconfig)
 end
 
 
+"""
+    propose_random_hop( particle_positions::Vector{Dict{Any,Any}} )
 
-# propose_random_hop( particle_positions::Vector{Dict{Any,Any}} )
-#
-# Randomly selects a particle 'β' at site 'k' to hop to a neighboring site 'l'.
-#
+Randomly selects a particle 'β' at site 'k' to hop to a neighboring site 'l'.
+
+"""
 function propose_random_hop(particle_positions)
     nbr_table = build_neighbor_table(bonds[1],
                                     model_geometry.unit_cell,
@@ -156,10 +166,12 @@ function propose_random_hop(particle_positions)
 end
 
 
-#   do_particle_hop!( pconfig::Matrix{Int}, proposed_hop:: )
-#
-# If proposed particle hop is accepted, perform the particle hop.
-#
+"""
+    do_particle_hop!( pconfig::Matrix{Int}, proposed_hop:: )
+
+If proposed particle hop is accepted, perform the particle hop.
+
+"""
 function do_particle_hop!(pconfig, proposed_hop)
     if proposed_hop[1] == true
         # HOP!
@@ -180,11 +192,13 @@ end
 
 
 
-#    update_particlepos!(  )
-#
-# If a particle 'β' at site 'k' successfully hops to a neighboring site 'l', update its
-# position in 'particle_positions' as well as 'pconfig.
-#
+"""
+    update_particlepos!( paritcle_positions, proposed_hop )
+
+If a particle 'β' at site 'k' successfully hops to a neighboring site 'l', update its
+position in 'particle_positions' as well as 'pconfig.
+
+"""
 function update_particle_position!(particle_positions, proposed_hop)
     particle_positions[proposed_hop[2]][1] = get_spindices_from_index(proposed_hop[5])[proposed_hop[3]]
     particle_positions[proposed_hop[2]][2] = proposed_hop[5]
@@ -193,10 +207,12 @@ end
 
 
 
-# local_updates!()
-#
-# Perform local electron updates.
-#
+"""
+    local_update!()
+
+Perform a local update.
+
+"""
 function local_update!()
     particle_positions = get_particle_positions(pconfig)
     proposed_hop = propose_random_hop(particle_positions)

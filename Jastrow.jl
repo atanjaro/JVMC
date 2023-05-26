@@ -14,11 +14,12 @@ using Distances
 #             [ ... ... ... ... ... ]
 #
 
-#
-# get_distances()
-#
-# Returns a matrix of all possible distances between sites 'i' nd 'j' for a given lattice.
-#
+"""
+    get_distances() 
+
+Returns a matrix of all possible distances between sites 'i' nd 'j' for a given lattice.
+
+"""
 function get_distances()
     dist = zeros(AbstractFloat, model_geometry.lattice.N, model_geometry.lattice.N)
     for i in 1:model_geometry.lattice.N
@@ -32,12 +33,13 @@ function get_distances()
 end
 
 
-#
-# set_jpars( dist_vec::Matrix{AbstractFloat}, vpar_init::AbstractFloat )
-#
-# Sets entries in the distance matrix to some initial Jastrow parameter value and 
-# sets parameters corresponding to the largest distance to 0.
-#
+"""
+    set_jpars( dist_vec::Matrix{AbstractFloat}, vpar_init::AbstractFloat ) 
+
+Sets entries in the distance matrix to some initial Jastrow parameter value and 
+sets parameters corresponding to the largest distance to 0.
+
+"""
 function set_jpars!(dist_matrix)
     r_max = maximum(dist_matrix)
     for i in 1:model_geometry.lattice.N
@@ -56,21 +58,23 @@ function set_jpars!(dist_matrix)
 end
 
 
-#
-# get_num_jpars( jpar_matrix::Matrix{AbstractFloat} )
-#
-# Returns the number of Jastrow parameters. 
-#
+"""
+    get_num_jpars( jpar_matrix::Matrix{AbstractFloat} ) 
+
+Returns the number of Jastrow parameters.
+
+"""
 function get_num_jpars(jpar_matrix)
     return count(i->(i > 0),(jpar_matrix[tril!(trues(size(jpar_matrix)), -1)]))
 end
 
 
-#
-# get_tvec( jpar_vec::Vector{AbstractFloat} )
-#
-# Returns vector of T with entries Tᵢ = ∑ⱼ vᵢⱼnᵢ(x). 
-#
+"""
+    get_Tvec( jpar_vec::Vector{AbstractFloat} ) 
+
+Returns vector of T with entries Tᵢ = ∑ⱼ vᵢⱼnᵢ(x).
+
+"""
 function get_Tvec(jpar_matrix)
     Tvec = Vector{AbstractFloat}(undef, model_geometry.lattice.N)
     # if den_jastrow == true
@@ -86,8 +90,7 @@ end
 
 
 """
-
-    update_tvec!( tvec::Vector{AbstractFloat} )
+    update_Tvec!( tvec::Vector{AbstractFloat} )
 
 Updates elements Tᵢ of the vector T after a Metropolis update.
 
@@ -102,7 +105,6 @@ end
 
 
 """
-
     get_jastrow_ratio( l::Int, k::Int, tvec::Vector{AbstractFloat} )
 
 Calculates ratio J(x₂)/J(x₁) of Jastrow factors for particle configurations which
@@ -116,10 +118,12 @@ function get_jastrow_ratio(l, k, tvec)
 end
 
 
-# get_jastrow_factor()
-#
-# Constructs relevant Jastrow factors.
-#
+"""
+    get_jastrow_factor()
+
+Constructs relevant Jastrow factors.
+
+"""
 function get_jastrow_factor()
     jpar_matrix = get_distances()
     set_jpars!(jpar_matrix)
