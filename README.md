@@ -1,5 +1,4 @@
 # JVMC
-Julia package for performing VMC simulations of Hubbard and electron-phonon models.
 
 This package implements the Variational Monte Carlo (VMC) method for Hubbard, and electron-phonon interactions, including both Holstein and Su-Schrieffer-Heeger (SSH) style electron-phonon coupling.
 
