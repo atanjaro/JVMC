@@ -65,7 +65,8 @@ end
 
 Constructs a 2⋅n⋅N by 2⋅n⋅N Hamiltonian matrix, where n is the
 number of orbitals per unit cell and N is the number of lattice sites,
-given tight binding parameters t, t', and μ.
+given tight binding parameters t, t', and μ. TODO: change tight binding
+parameters to tx,ty,t' for future SSH model functionality.
 
 """
 function build_tight_binding_model(tight_binding_model)
@@ -393,8 +394,8 @@ function build_slater_determinant()
     
     # build Slater determinant
     D = zeros(AbstractFloat, Ne, Ne)
+    pconfig = generate_initial_configuration()
     while isapprox(det(D), 0.0, atol=1e-5) == true   
-        pconfig = generate_initial_configuration()
         for i in 1:Ne
             D[i,:] = M[findall(x-> x == 1, pconfig)[i],:]
         end
