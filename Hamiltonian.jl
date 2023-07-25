@@ -400,6 +400,13 @@ function build_slater_determinant()
             D[i,:] = M[findall(x-> x == 1, pconfig)[i],:]
         end
     end
+    # write matrices to file
+    if write == true
+        writedlm("H_mf.csv", H_mf)
+        writedlm("D.csv", D)
+        writedlm("M.csv", M)
+        writedlm("U.csv", U)
+    end
 
     return D, pconfig, ε₀, M, U
 end
