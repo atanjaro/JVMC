@@ -49,7 +49,7 @@ function set_jpars!(dist_matrix)
             elseif i == j
                 dist_matrix[i,j] == 0  
             else
-                dist_matrix[i,j] = jpar_init
+                dist_matrix[i,j] = vᵢⱼ
             end
         end
     end
@@ -72,18 +72,27 @@ end
 """
     get_Tvec( jpar_vec::Vector{AbstractFloat} ) 
 
-Returns vector of T with entries Tᵢ = ∑ⱼ vᵢⱼnᵢ(x).
+Returns vector of T with entries Tᵢ = ∑ⱼ vᵢⱼnᵢ(x) if using density Jastrow or 
+Tᵢ = ∑ⱼ wᵢⱼSᵢ(x) if using spin Jastrow.
 
 """
 function get_Tvec(jpar_matrix)
     Tvec = Vector{AbstractFloat}(undef, model_geometry.lattice.N)
-    # if den_jastrow == true
-        for i in 1:model_geometry.lattice.N
-            Tvec[i] = sum(jpar_matrix[i,:]) * ( number_operator(i,pconfig)[1] + number_operator(i,pconfig)[2] )  
+    for i in 1:model_geometry.lattice.N
+        if spn_jastrow == false
+            if pht == true
+                Tvec[i] = sum(jpar_matrix[i,:]) * (number_operator(i,pconfig)[1] - number_operator(i,pconfig)[2])  
+            else
+                Tvec[i] = sum(jpar_matrix[i,:]) * (number_operator(i,pconfig)[1] + number_operator(i,pconfig)[2])  
+            end
+        else
+            if pht == true
+                Tvec[i] = sum(jpar_matrix[i,:]) * 0.5 * (number_operator(i,pconfig)[1] + number_operator(i,pconfig)[2])
+            else
+                Tvec[i] = sum(jpar_matrix[i,:]) * 0.5 * (number_operator(i,pconfig)[1] - number_operator(i,pconfig)[2])
+            end
         end
-    # elseif spn_jastrow == true
-    #     # TODO: include spin Jastrow terms
-    # end
+    end
 
     return Tvec
 end
@@ -95,9 +104,9 @@ end
 Updates elements Tᵢ of the vector T after a Metropolis update.
 
 """
-function update_Tvec!(l::Int, k::Int, tvec)
+function update_Tvec!(l::Int, k::Int, Tvec)
     for i in 1:L
-        Tvec[i] += (jpar_matrix[i,l] - jpar_matrix[i,k]) #TODO: include sgn for PHT
+        Tvec[i] += (jpar_matrix[i,l] - jpar_matrix[i,k]) 
     end
 
     return Tvec
@@ -105,26 +114,28 @@ end
 
 
 """
-    get_jastrow_ratio( l::Int, k::Int, tvec::Vector{AbstractFloat} )
+    get_jastrow_ratio( l::Int, k::Int, Tₗ::Vector{AbstractFloat}, Tₖ::Vector{AbstractFloat}  )
 
-Calculates ratio J(x₂)/J(x₁) of Jastrow factors for particle configurations which
-differ by a single particle hopping from site 'l' (configuration 'x₁') to site 'k' (configuration 'x₂'). 
+Calculates ratio J(x₂)/J(x₁) = exp[-s(Tₗ - Tₖ) + vₗₗ - vₗₖ ] of Jastrow factors for particle configurations 
+which differ by a single particle hopping from site 'l' (configuration 'x₁') to site 'k' (configuration 'x₂')
+using the corresponding T vectors Tₗ and Tₖ, rsepctively.  
 
 """
-function get_jastrow_ratio(l, k, tvec)
-    # a particle hops from site l to site k
-    # J(x₂)/J(x₁) = exp[-(Tₗ - Tₖ) - vₗₗ - vₗₖ ]
-    return nothing
+function get_jastrow_ratio(l, k, Tₗ, Tₖ)
+    jas_ratio = exp(-(Tₗ - Tₖ) + jpar_matrix[l,l] - jpar_matrix[l,k])
+
+    return jas_ratio
 end
 
 
 """
-    get_jastrow_factor()
+    build_jastrow_factor()
 
-Constructs relevant Jastrow factors.
+Constructs relevant Jastrow factor and returns intitial T vector, matrix of Jastrow parameters, and
+number of Jastrow parameters. 
 
 """
-function get_jastrow_factor()
+function build_jastrow_factor()
     jpar_matrix = get_distances()
     set_jpars!(jpar_matrix)
     num_jpars = get_num_jpars(jpar_matrix)
@@ -132,10 +143,12 @@ function get_jastrow_factor()
     if verbose == true
         println(num_jpars," Jastrow parameters initialized")
     end
-    Tvec = get_Tvec(jpar_matrix)
+    init_Tvec = get_Tvec(jpar_matrix)
 
-    return Tvec, jpar_matrix, num_jpars
+    return init_Tvec, jpar_matrix, num_jpars
 end
+
+
 
 
 

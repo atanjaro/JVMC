@@ -448,7 +448,18 @@ function get_A_matrix(H_vpar)
     return adjoint(U)*adjoint(U)*H_vpar*U*U
 end
 
+"""
+    get_W_matrix(M::Matrix{AbstractFloat}, D::{AbstractFloat}) 
+    
+Returns overlap ratio matrix W = MD⁻¹.
+
+"""
+function get_W_matrix(M, D)
+    return M * inv(D)       # TODO: calculating a matrix inverse is an O(N³) operation
+end                         #       need to do: DᵀWᵀ = Mᵀ, which is 
+
 # end # module
+
 
 
 
