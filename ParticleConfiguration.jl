@@ -1,7 +1,6 @@
 using LatticeUtilities
 using Random
 
-
 """
     get_particle_numbers( density::{AbstractFloat} ) 
 
@@ -48,16 +47,13 @@ end
 
 
 """
-    generate_initial_configuration() 
+    generate_initial_electron_configuration() 
 
 Returns a randomly generated initial configuration of electrons.
 
 """
-function generate_initial_configuration()
-    nbr_table = build_neighbor_table(bonds[1],
-                                    model_geometry.unit_cell,
-                                    model_geometry.lattice)
-    init_pconfig = zeros(Int, length(nbr_table[1,:]))                                                      
+function generate_initial_electron_configuration()
+    init_pconfig = zeros(Int, 2*model_geometry.lattice.N)                                                      
     while sum(init_pconfig) < nup
         init_pconfig[rand(rng, 1:model_geometry.lattice.N)] = 1
     end
@@ -66,6 +62,51 @@ function generate_initial_configuration()
     end
     return init_pconfig
 end
+
+
+"""
+    generate_initial_onsite_phonon_configuration() 
+
+Returns a randomly generated initial configuration of onsite optical phonons.
+This would apply to Holstein and optical-SSH models.
+
+"""
+function generate_initial_onsite_phonon_configuration()
+    init_phconfig = zeros(Int, model_geometry.lattice.N)  
+
+    max_upper_bound = 100        # adjust as needed
+
+    for i in 1:model_geometry.lattice.N
+        upper_bound = rand(rng, 1:max_upper_bound)
+        init_phconfig[i] = rand(rng, 0:upper_bound) 
+    end
+
+    return init_phconfig
+end
+
+
+"""
+    generate_initial_bond_phonon_configuration() 
+
+Returns a randomly generated initial configuration of bond optical phonons.
+This would apply only to the bond-SSH model.
+
+"""
+function generate_initial_bond_phonon_configuration()
+    init_phconfig = zeros(Int, 2*model_geometry.lattice.N)  # each entry corresponds to a bond on the lattice
+                                                            # TODO: how to track the number of each bond?
+
+    max_upper_bound = 100        # adjust as needed
+
+    for i in 1:2*model_geometry.lattice.N
+        upper_bound = rand(rng, 1:max_upper_bound)
+        init_phconfig[i] = rand(rng, 0:upper_bound) 
+    end
+
+    return init_phconfig
+end
+
+
 
 
 """
@@ -101,6 +142,23 @@ end
 
 
 """
+    get_spindices_from_index( index::Int ) 
+
+Returns spin-up and spin-down indices from a given site index.
+
+"""
+function get_spindices_from_index(index)
+    @assert index <= model_geometry.lattice.N
+    spindex1 = index
+    spindex2 = index + model_geometry.lattice.N
+    return spindex1, spindex2
+end
+
+
+
+
+
+"""
     number_operator( site::Int, pconfig::Vector{Int} )
 
 Returns the number of spin-up and spin-down electrons 
@@ -113,12 +171,6 @@ function number_operator(site, pconfig)
          pconfig[site] + pconfig[site+model_geometry.lattice.N]     # total number of electrons on a site
 end
 
-
-"""
-    spin_operator( site::Int, pconfig::Vector{Int} )
-
-Returns the total spin of particles occupying a real lattice site i. 
-"""
 
 
 """
@@ -142,16 +194,21 @@ end
 
 
 """
-    update_particlepos!( paritcle_positions, proposed_hop )
+    update_particle_position!( paritcle_positions, proposed_hop )
 
 If a particle 'β' at site 'k' successfully hops to a neighboring site 'l', update its
 position in 'particle_positions' as well as 'pconfig.
 
 """
 function update_particle_position!(particle_positions, proposed_hop)
-    particle_positions[proposed_hop[2]][1] = get_spindices_from_index(proposed_hop[5])[proposed_hop[3]]
-    particle_positions[proposed_hop[2]][2] = proposed_hop[5]
-    return particle_positions
+    if proposed_hop.acceptance == true
+        particle_positions[proposed_hop.particle][1] = get_spindices_from_index(proposed_hop.fsite)[proposed_hop.spin]
+        particle_positions[proposed_hop.particle][2] = proposed_hop.fsite
+        return particle_positions
+    else
+        # DO NOTHING
+        return nothing
+    end
 end
 
 

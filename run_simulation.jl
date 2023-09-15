@@ -6,18 +6,18 @@ using DelimitedFiles
 using BenchmarkTools
 
 # files to include
-# include("Parameters.jl")
 include("Hamiltonian.jl")
 include("ParticleConfiguration.jl")
 include("Jastrow.jl")
+include("VMC.jl")
 
 #############################
 ## DEFINE MODEL PARAMETERS ##
 #############################
 
 # define the size of the lattice
-Lx = 2
-Ly = 2
+Lx = 4
+Ly = 4
 
 # define initial electron density
 n̄ = 1.0
@@ -32,9 +32,16 @@ t = 1.0
 # next nearest neighbor hopping
 tp = 0.0
 
+# onsite energy
+# ε = 0.0
+
 # chemical potential
 μ = 0.0
 opt_μ = true
+
+# fugacity
+# μₚₕ = 0.0
+# opt_μₚₕ = true
 
 # TODO: read in initial variational parameter set
 # this will include both order parameters and Jastrow parameters
@@ -82,12 +89,9 @@ wᵢⱼ = 0.5
 ## DEFINE SIMULATION PARAMETERS ##
 ##################################
 
-# whether model is particle-hole transformed
+# whether model is particle-hole transformed (if so, automatically GCE)
 pht = true
-
-# whether to use spin Jastrow (otherwise density Jastrow is used)
-spn_jastrow = true             
-
+       
 # initialize random seed
 seed = abs(rand(Int))
 
@@ -105,6 +109,9 @@ N_bins = 100
 
 # bin size
 bin_size = div(N_updates, N_bins)
+
+# optimization rate
+η = 0.0001
 
 # whether to output to terminal during runtime
 verbose = true
@@ -154,16 +161,16 @@ tight_binding_model = TightBindingModel([t,tp],μ)
 
 # define initial variational parameters
 variational_parameters = VariationalParameters(["μ","Δs"], [μ, Δs], [opt_μ, opt_s])
-    
-###################################
-## INITIALIZE TRIAL WAVEFUNCTION ##
-###################################
 
 # get particle numbers (use if initial density is specified)
 Np, Ne, nup, ndn = get_particle_numbers(n̄)
 
 # get particle density (use if initial particle number if specified)
 # density, Np, Ne = get_particle_density(nup, ndn)
+    
+###########################
+## SET-UP VMC SIMULATION ##
+###########################
 
 # construct mean-field Hamiltonian
 H_mf = build_mean_field_hamiltonian()
@@ -171,17 +178,71 @@ H_mf = build_mean_field_hamiltonian()
 # initialize Slater determinant state and initial particle configuration
 (D, pconfig, ε₀, M, U) = build_slater_determinant()  
 
+# initialize uncorrelated phonon state and initial particle configuration
+# (P, phconfig)  = build_phonon_state()
+
 # initialize W matrix of wavefunction overlap ratios
 W = get_W_matrix(M, D)
 
-# construct Jastrow factor
-(init_Tvec, jpar_matrix, num_jpars) = build_jastrow_factor()
+# construct density Jastrow factor
+(init_dTvec, init_dpar_matrix, num_dpars) = build_jastrow_factor("density")
+
+# construct spin Jastrow factor 
+(init_sTvec, init_spar_matrix, num_spars) = build_jastrow_factor("spin")
+
+# construct electron-phonon density Jastrow factor 
+# (init_pTvec, init_ppar_matrix, num_ppars) = build_jastrow_factor("electron-phonon")
 
 #############################
 ## INITIALIZE MEASUREMENTS ##
 #############################
 
+# Initialize standard tight binding model VMC measurements
+initialize_measurements!(model_geometry, "tight binding")
 
+# Initialze measurements related to the Hubbard model
+initialize_measurements!(model_geometry, "hubbard")
+
+# Initialze measurements related to electron-phonon models
+# initialize_measurements!(model_geometry, "electron-phonon")
+
+# Initialize density correlation measurements
+initialize_correlation_measurements!(model_geometry, "density")
+
+# Initialize spin correlation measurements
+initialize_correlation_measurements!(model_geometry, "spin")
+
+
+###################################
+## BURNIN/THERMALIZATION UPDATES ##
+###################################
+
+# Iterate over burnin/thermalization updates.
+for n in 1:N_burnin
+    # perform local updates to electron dofs
+    # electron_local_update!()
+
+    # perform local updates to phonon dofs
+    # phonon_local_updates
+end
+
+# recompute W and Tvec(s) for numerical stabilization
+
+# Iterate over the number of bin, i.e. the number of time measurements will be dumped to file.
+for bin in 1:N_bins
+
+    # Iterate over the number of updates and measurements performed in the current bin.
+    for n in 1:bin_size
+        # perform local updates to electron dofs
+        # electron_local_update!()
+
+        # perform local updates to phonon dofs
+        # phonon_local_update!()
+    end
+
+    # Write the average measurements for the current bin to file.
+    # write_measurements!()
+end
 
 
 

@@ -34,13 +34,13 @@ end
 
 
 """
-    set_jpars( dist_vec::Matrix{AbstractFloat}, vpar_init::AbstractFloat ) 
+    set_jpars!( dist_vec::Matrix{AbstractFloat}) 
 
 Sets entries in the distance matrix to some initial Jastrow parameter value and 
 sets parameters corresponding to the largest distance to 0.
 
 """
-function set_jpars!(dist_matrix)
+function set_jpars!(dist_matrix) 
     r_max = maximum(dist_matrix)
     for i in 1:model_geometry.lattice.N
         for j in 1:model_geometry.lattice.N
@@ -48,7 +48,7 @@ function set_jpars!(dist_matrix)
                 dist_matrix[i,j] = 0
             elseif i == j
                 dist_matrix[i,j] == 0  
-            else
+            else # change according to Jastrow type
                 dist_matrix[i,j] = vᵢⱼ
             end
         end
@@ -70,27 +70,29 @@ end
 
 
 """
-    get_Tvec( jpar_vec::Vector{AbstractFloat} ) 
+    get_Tvec( jpar_matrix::Matrix{AbstractFloat}, jastrow_type::AbstractString ) 
 
 Returns vector of T with entries Tᵢ = ∑ⱼ vᵢⱼnᵢ(x) if using density Jastrow or 
 Tᵢ = ∑ⱼ wᵢⱼSᵢ(x) if using spin Jastrow.
 
 """
-function get_Tvec(jpar_matrix)
+function get_Tvec(jpar_matrix, jastrow_type)
     Tvec = Vector{AbstractFloat}(undef, model_geometry.lattice.N)
     for i in 1:model_geometry.lattice.N
-        if spn_jastrow == false
+        if jastrow_type == "density"
             if pht == true
                 Tvec[i] = sum(jpar_matrix[i,:]) * (number_operator(i,pconfig)[1] - number_operator(i,pconfig)[2])  
             else
                 Tvec[i] = sum(jpar_matrix[i,:]) * (number_operator(i,pconfig)[1] + number_operator(i,pconfig)[2])  
             end
-        else
+        elseif jastrow_type == "spin"
             if pht == true
                 Tvec[i] = sum(jpar_matrix[i,:]) * 0.5 * (number_operator(i,pconfig)[1] + number_operator(i,pconfig)[2])
             else
                 Tvec[i] = sum(jpar_matrix[i,:]) * 0.5 * (number_operator(i,pconfig)[1] - number_operator(i,pconfig)[2])
             end
+        elseif jastrow_type == "electron-phonon"
+            # populate electron-phonon T vector
         end
     end
 
@@ -129,21 +131,22 @@ end
 
 
 """
-    build_jastrow_factor()
+    build_jastrow_factor(jastrow_type::AbstractString)
 
 Constructs relevant Jastrow factor and returns intitial T vector, matrix of Jastrow parameters, and
 number of Jastrow parameters. 
 
 """
-function build_jastrow_factor()
+function build_jastrow_factor(jastrow_type)
     jpar_matrix = get_distances()
     set_jpars!(jpar_matrix)
     num_jpars = get_num_jpars(jpar_matrix)
     # report the number of Jastrow parameters
     if verbose == true
         println(num_jpars," Jastrow parameters initialized")
+        println("Type: ", jastrow_type)
     end
-    init_Tvec = get_Tvec(jpar_matrix)
+    init_Tvec = get_Tvec(jpar_matrix,jastrow_type)
 
     return init_Tvec, jpar_matrix, num_jpars
 end

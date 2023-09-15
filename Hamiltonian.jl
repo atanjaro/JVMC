@@ -34,9 +34,9 @@ end
 A type defining a non-interacting tight binding model
 
 """
-struct TightBindingModel
+struct TightBindingModel    # TODO: add onsite energy?
     # hopping amplitudes
-    t::Vector{AbstractFloat}   # [t, t']
+    t::Vector{AbstractFloat}   # [t, t']    # TODO: change to [[t₁, t₂, t₃], t'] for SSH models
     # chemical potentials
     μ::AbstractFloat           # TODO: change to vector based on number of orbitals [μ₁,μ₂,μ₃,...]
 end
@@ -394,8 +394,8 @@ function build_slater_determinant()
     
     # build Slater determinant
     D = zeros(AbstractFloat, Ne, Ne)
-    pconfig = generate_initial_configuration()
-    while isapprox(det(D), 0.0, atol=1e-5) == true   
+    pconfig = generate_initial_electron_configuration()
+    while isapprox(det(D), 0.0, atol=1e-5) == true   # TODO: speed up this step
         for i in 1:Ne
             D[i,:] = M[findall(x-> x == 1, pconfig)[i],:]
         end
