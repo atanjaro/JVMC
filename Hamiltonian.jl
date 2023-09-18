@@ -392,14 +392,28 @@ function build_slater_determinant()
     ε₀ = ε[1:Ne]  
     M = hcat(U[:,1:Ne])
     
+    ## deprecated singularity test ##
+    # D = zeros(AbstractFloat, Ne, Ne)
+    # pconfig = generate_initial_electron_configuration()
+    # while isapprox(det(D), 0.0, atol=1e-5) == true  
+    #     for i in 1:Ne
+    #         D[i,:] = M[findall(x-> x == 1, pconfig)[i],:]
+    #     end
+    # end
+
     # build Slater determinant
     D = zeros(AbstractFloat, Ne, Ne)
-    pconfig = generate_initial_electron_configuration()
-    while isapprox(det(D), 0.0, atol=1e-5) == true   # TODO: speed up this step
-        for i in 1:Ne
-            D[i,:] = M[findall(x-> x == 1, pconfig)[i],:]
+    while true
+        pconfig = generate_initial_electron_configuration()
+        D = M[findall(x -> x == 1, pconfig), :]
+        
+        if is_invertible(D)
+            break  
         end
     end
+
+    println(is_invertible(D))
+
     # write matrices to file
     if write == true
         writedlm("H_mf.csv", H_mf)
@@ -449,14 +463,29 @@ function get_A_matrix(H_vpar)
 end
 
 """
-    get_W_matrix(M::Matrix{AbstractFloat}, D::{AbstractFloat}) 
+    get_equal_greens(M::Matrix{AbstractFloat}, D::Matrix{AbstractFloat}) 
     
-Returns overlap ratio matrix W = MD⁻¹.
+Returns the equal-time Green's function (overlap ratio) matrix W = MD⁻¹.
 
 """
-function get_W_matrix(M, D)
+function get_equal_greens(M, D)
     return M * inv(D)       # TODO: calculating a matrix inverse is an O(N³) operation
 end                         #       need to do: DᵀWᵀ = Mᵀ, which is 
+
+
+"""
+    is_invertible(D::Matrix{AbstractFloat}) 
+    
+Checks if given matrix is invertible by checking its rank.
+
+"""
+function is_invertible(D)
+    if size(D, 1) != size(D, 2)
+        return false
+    end
+
+    return rank(D) == size(D, 1)
+end
 
 # end # module
 

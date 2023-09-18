@@ -16,8 +16,8 @@ include("VMC.jl")
 #############################
 
 # define the size of the lattice
-Lx = 4
-Ly = 4
+Lx = 16
+Ly = 16
 
 # define initial electron density
 n̄ = 1.0
@@ -36,7 +36,7 @@ tp = 0.0
 # ε = 0.0
 
 # chemical potential
-μ = 0.0
+μ = 3.0
 opt_μ = true
 
 # fugacity
@@ -58,7 +58,7 @@ opt_d = false
 
 # anti-ferromagnetic (Neél) order parameter
 Δa = 0.5  # initial value
-opt_a = false  
+opt_a = false 
 
 # uniform charge order parameter
 Δc = 0.5  # intial value
@@ -181,8 +181,8 @@ H_mf = build_mean_field_hamiltonian()
 # initialize uncorrelated phonon state and initial particle configuration
 # (P, phconfig)  = build_phonon_state()
 
-# initialize W matrix of wavefunction overlap ratios
-W = get_W_matrix(M, D)
+# initialize equal-time Green's function 
+W = get_equal_greens(M, D)
 
 # construct density Jastrow factor
 (init_dTvec, init_dpar_matrix, num_dpars) = build_jastrow_factor("density")
