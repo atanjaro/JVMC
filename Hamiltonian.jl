@@ -59,7 +59,6 @@ struct VariationalParameters
 end
 
 
-
 """
     build_tight_binding_model( tight_binding_model::TightBindingModel ) 
 
@@ -408,21 +407,17 @@ function build_slater_determinant()
         D = M[findall(x -> x == 1, pconfig), :]
         
         if is_invertible(D)
-            break  
+            # write matrices to file
+            if write == true
+                writedlm("H_mf.csv", H_mf)
+                writedlm("D.csv", D)
+                writedlm("M.csv", M)
+                writedlm("U.csv", U)
+            end
+
+            return D, pconfig, ε₀, M, U
         end
-    end
-
-    println(is_invertible(D))
-
-    # write matrices to file
-    if write == true
-        writedlm("H_mf.csv", H_mf)
-        writedlm("D.csv", D)
-        writedlm("M.csv", M)
-        writedlm("U.csv", U)
-    end
-
-    return D, pconfig, ε₀, M, U
+    end    
 end
 
 

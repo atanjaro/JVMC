@@ -16,8 +16,8 @@ include("VMC.jl")
 #############################
 
 # define the size of the lattice
-Lx = 16
-Ly = 16
+Lx = 4
+Ly = 4
 
 # define initial electron density
 n̄ = 1.0
@@ -53,7 +53,7 @@ opt_μ = true
 opt_s  = true
 
 # d-wave order parameter
-Δd = 0.25    # initial value                            
+Δd = 0.4    # initial value                            
 opt_d = false   
 
 # anti-ferromagnetic (Neél) order parameter
@@ -61,14 +61,14 @@ opt_d = false
 opt_a = false 
 
 # uniform charge order parameter
-Δc = 0.5  # intial value
+Δc = 0.6  # intial value
 opt_c = false       
 
-# charge modulation parameter
+# charge modulation parameter (stripe)
 Δcm = 0.5     # intial value
 opt_cm = false     
 
-# spin modulation parameter
+# spin modulation parameter (stripe)
 Δsm = 0.5     # initial value
 opt_sm = false     
 
@@ -159,7 +159,7 @@ bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
 # define non-interacting tight binding model
 tight_binding_model = TightBindingModel([t,tp],μ)
 
-# define initial variational parameters
+# initialize variational parameters
 variational_parameters = VariationalParameters(["μ","Δs"], [μ, Δs], [opt_μ, opt_s])
 
 # get particle numbers (use if initial density is specified)
@@ -179,9 +179,9 @@ H_mf = build_mean_field_hamiltonian()
 (D, pconfig, ε₀, M, U) = build_slater_determinant()  
 
 # initialize uncorrelated phonon state and initial particle configuration
-# (P, phconfig)  = build_phonon_state()
+# (P, phconfig) = build_phonon_state()
 
-# initialize equal-time Green's function 
+# initialize equal-time Green's function (W matrix)
 W = get_equal_greens(M, D)
 
 # construct density Jastrow factor
