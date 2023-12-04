@@ -54,8 +54,35 @@ struct VariationalParameters
     pars::Vector{AbstractString}
     # variational parameter values
     vals::Vector{AbstractFloat}
-    # whether each parameter is optimized
-    opts::Vector{Bool}
+end
+
+
+"""
+    initialize_variational_parameters(pars:;, vals:: ) 
+
+Constructor for the variational parameters type.
+
+"""
+function initialize_variational_parameters(pars, vals)
+    @assert length(pars) == length(vals) "Input vectors must have the same length"
+
+    return VariationalParameters(pars, vals)
+end
+
+
+"""
+    map_variational_parameters( variational_parameters::VariationalParamters ) 
+
+For a given set of variational parameters, returns a dictionary of 
+that reports the value and optimization flag for a given parameter.
+
+"""
+function map_variational_parameters(variational_parameters)
+    vparam_map = Dict()
+    for i in 1:length(variational_parameters.vals)
+       vparam_map[variational_parameters.pars[i]] = variational_parameters.vals[i]
+    end
+    return vparam_map
 end
 
 
@@ -69,20 +96,22 @@ parameters to tx,ty,t' for future SSH model functionality.
 
 """
 function build_tight_binding_model(tight_binding_model)
-    dims = model_geometry.unit_cell.n*model_geometry.lattice.N
+    dims = model_geometry.unit_cell.n*model_geometry.lattice.N 
     nbr_table = build_neighbor_table(bonds[1],
                                     model_geometry.unit_cell,
                                     model_geometry.lattice)
-    H_t = zeros(AbstractFloat, 2*dims, 2*dims)
-    H_tp = zeros(AbstractFloat, 2*dims, 2*dims)
+    H_t = complex_zeros(2*dims, 2*dims)
+    H_tp = complex_zeros(2*dims, 2*dims)
     μ_vec = Vector{AbstractFloat}(undef, 2*dims)
     if pht == true
         # particle-hole transformed chemical potential
-        for i in 1:dims
-            for j in dims+1:2*dims
-                μ_vec[i] = -tight_binding_model.μ
+        if !("μ" in parameters_to_optimize)
+            for i in 1:dims
+                for j in dims+1:2*dims
+                    μ_vec[i] = -tight_binding_model.μ
                     μ_vec[j] = tight_binding_model.μ
-            end 
+                end 
+            end
         end
         # particle-hole transformed nearest neighbor hopping
         if model_geometry.lattice.N == 4
@@ -142,11 +171,13 @@ function build_tight_binding_model(tight_binding_model)
         end
     else
         # chemical potential
-        for i in 1:dims
-            for j in dims+1:2*dims
-                μ_vec[i] = -tight_binding_model.μ
+        if !("μ" in parameters_to_optimize)
+            for i in 1:dims
+                for j in dims+1:2*dims
+                    μ_vec[i] = -tight_binding_model.μ
                     μ_vec[j] = -tight_binding_model.μ
-            end 
+                end 
+            end
         end
         # nearest neighbor hopping
         if model_geometry.lattice.N == 4
@@ -204,7 +235,12 @@ function build_tight_binding_model(tight_binding_model)
             end
         end
     end
-    return H_t + H_tp + LinearAlgebra.Diagonal(μ_vec)
+
+    if !("μ" in parameters_to_optimize)
+        return H_t + H_tp + LinearAlgebra.Diagonal(μ_vec)
+    else
+        return H_t + H_tp
+    end
 end
 
 
@@ -219,16 +255,17 @@ matrices and a vector of individual matrix terms.
 function build_variational_terms(variational_parameters)
     dims = model_geometry.unit_cell.n*model_geometry.lattice.N
     vparam_map = map_variational_parameters(variational_parameters) 
-    Hs = zeros(AbstractFloat, 2*dims, 2*dims)
-    Hd = zeros(AbstractFloat, 2*dims, 2*dims)    
-    Ha = zeros(AbstractFloat, 2*dims, 2*dims)    
-    Hc = zeros(AbstractFloat, 2*dims, 2*dims) 
-    Hμ = zeros(AbstractFloat, 2*dims, 2*dims)      
-    # Hcs = zeros(AbstractFloat, 2*dims, 2*dims)
-    # Hss = zeros(AbstractFloat, 2*dims, 2*dims)    
+    Hs = complex_zeros(2*dims, 2*dims)
+    Hd = complex_zeros(2*dims, 2*dims)    
+    Ha = complex_zeros(2*dims, 2*dims)    
+    Hc = complex_zeros(2*dims, 2*dims) 
+    Hμ = complex_zeros(2*dims, 2*dims)      
+    # Hcs = complex_zeros(2*dims, 2*dims)
+    # Hss = complex_zeros(2*dims, 2*dims)    
+    H_vpars = []
+    V = []
     if haskey(vparam_map, "Δs") == true
         @assert pht == true
-        @assert vparam_map["Δs"][2] == true
         bA = zeros(AbstractFloat, dims, dims)
         bD = zeros(AbstractFloat, dims, dims)
         Δ_vec_bB = Vector{AbstractFloat}(undef, dims)
@@ -239,14 +276,15 @@ function build_variational_terms(variational_parameters)
         end
         bB = LinearAlgebra.Diagonal(Δ_vec_bB)
         bC = LinearAlgebra.Diagonal(Δ_vec_bC)
-        Hs += vparam_map["Δs"][1]*Matrix([bA bB; bC bD])
+        Vs = Matrix([bA bB; bC bD])
+        Hs += vparam_map["Δs"][1]*Vs
+        push!(H_vpars,Hs)
+        push!(V, Vs)
     end
     if haskey(vparam_map, "Δd") == true
         @assert pht == true
-        @assert vparam_map["Δd"][2] == true
     end
     if haskey(vparam_map, "Δa") == true
-        @assert vparam_map["Δa"][2] == true
         afm_vec = Vector{AbstractFloat}(undef, 2*dims)
         if pht == true
             # particle-hole transformed Neél order
@@ -273,10 +311,12 @@ function build_variational_terms(variational_parameters)
                 end 
             end
         end
-        Ha += vparam_map["Δa"][1]*LinearAlgebra.Diagonal(afm_vec)
+        Va = LinearAlgebra.Diagonal(afm_vec)
+        Ha += vparam_map["Δa"][1]*Va
+        push!(H_vpars,Ha)
+        push!(V, Va)
     end
     if haskey(vparam_map, "Δc") == true
-        @assert vparam_map["Δc"][2] == true
         cdw_vec = Vector{AbstractFloat}(undef, 2*dims)
         if pht == true
             # particle-hole transformed charge density wave
@@ -303,10 +343,12 @@ function build_variational_terms(variational_parameters)
                 end 
             end
         end
-        Hc += vparam_map["Δc"][1]*LinearAlgebra.Diagonal(cdw_vec)
+        Vc = LinearAlgebra.Diagonal(cdw_vec)
+        Hc += vparam_map["Δc"][1]*Vc
+        push!(H_vpars,Hc)
+        push!(V, Vc)
     end
     if haskey(vparam_map, "μ") == true
-        @assert vparam_map["μ"][2] == true
         μ_vec = Vector{AbstractFloat}(undef, 2*dims)
         if pht == true
             # particle-hole transformed chemical potential
@@ -325,7 +367,10 @@ function build_variational_terms(variational_parameters)
                 end 
             end
         end
-        Hμ += vparam_map["μ"][1]*LinearAlgebra.Diagonal(μ_vec)
+        Vμ = LinearAlgebra.Diagonal(μ_vec)
+        Hμ += vparam_map["μ"][1]*Vμ
+        push!(H_vpars,Hμ)
+        push!(V, Vμ)
     end
     # pd_vec = Vector{AbstractFloat}(undef, 2*norbs*L)
     #     for i in 2:3:(2*norbs*L)-1
@@ -336,24 +381,9 @@ function build_variational_terms(variational_parameters)
     #     end
        
     #     return LinearAlgebra.Diagonal(pd_vec)
-    return [Hs + Hd + Ha + Hc, [Hs, Hd, Ha, Hc, Hμ]]
+    return [sum(H_vpars),V]
 end
 
-
-"""
-    map_variational_parameters( variational_parameters::VariationalParamters ) 
-
-For a given set of variational parameters, returns a dictionary of 
-that reports the value and optimization flag for a given parameter.
-
-"""
-function map_variational_parameters(variational_parameters)
-    vparam_map = Dict()
-    for i in 1:length(variational_parameters.vals)
-       vparam_map[variational_parameters.pars[i]] = (variational_parameters.vals[i],variational_parameters.opts[i])
-    end
-    return vparam_map
-end
 
 
 """
@@ -364,7 +394,7 @@ matrix of variational terms.
 
 """
 function build_mean_field_hamiltonian()
-    return build_tight_binding_model(tight_binding_model) + build_variational_terms(variational_parameters)[1]
+    return build_tight_binding_model(tight_binding_model) + build_variational_terms(variational_parameters)[1], build_variational_terms(variational_parameters)[2]
 end
 
 
@@ -378,7 +408,7 @@ the many-particle configuration basis with associated initial energies.
 function build_slater_determinant()
     # diagonalize Hamiltonian
     ε, U = diagonalize(H_mf) 
-    if is_openshell(ε,Ne) == true
+    if is_openshell(ε,Np) == true
         if verbose == true
             println("WARNING! OPEN SHELL DETECTED")
         end
@@ -388,8 +418,8 @@ function build_slater_determinant()
         end
     end
     # store energies and M matrix
-    ε₀ = ε[1:Ne]  
-    M = hcat(U[:,1:Ne])
+    ε₀ = ε[1:Np]  
+    M = hcat(U[:,1:Np])
     
     ## deprecated singularity test ##
     # D = zeros(AbstractFloat, Ne, Ne)
@@ -401,7 +431,7 @@ function build_slater_determinant()
     # end
 
     # build Slater determinant
-    D = zeros(AbstractFloat, Ne, Ne)
+    D = zeros(AbstractFloat, Np, Np)
     while true
         pconfig = generate_initial_electron_configuration()
         D = M[findall(x -> x == 1, pconfig), :]
@@ -415,24 +445,9 @@ function build_slater_determinant()
                 writedlm("U.csv", U)
             end
 
-            return D, pconfig, ε₀, M, U
+            return D, pconfig, ε, ε₀, M, U
         end
     end    
-end
-
-
-"""
-    diagonalize( H_mf::Matrix{AbstractFloat} ) 
-
-Returns all eigenenergies and all eigenstates of the mean-field Hamiltonian, 
-the latter being stored in the columns of a matrix. Convention: H(diag) = U⁺HU.
-
-"""
-function diagonalize(H_mf)
-    # check if Hamiltonian is Hermitian
-    @assert ishermitian(H_mf) == true
-    F = eigen(H_mf)    
-    return F.values, F.vectors  
 end
 
 
@@ -448,39 +463,79 @@ end
 
 
 """
-    get_A_matrix( H_vpar::Matrix{AbstractFloat}, slater_determinant::Matrix{AbstractFloat} ) 
+    get_Ak_matrices( V::Vector{Matrix{AbstractFloat}}, U::Matrix{AbstractFloat} ) 
     
-Returns variational parameter A matrix.
+Returns variational parameter matrix Aₖ. Compute Qₖ = (U⁺VₖU)_(ην) / (ε_η - ε_ν), for η > Nₚ and ν ≤ Nₚ and is 0 otherwise
+(η and ν run from 1 to 2L). Vₖ is the bare matrix of the kth variational parameter i.e. H_vpar. 
 
 """
-function get_A_matrix(H_vpar)
-    return adjoint(U)*adjoint(U)*H_vpar*U*U
+# This function is DEAD slow for systems greater than 16 sites. 
+# TODO: Since most of the matrices being written are zero matrices, this occupies way too much of the memory in 
+#       the end. This operation needs to changed such that the non-zero matricies are written to Ak (and tracked) while 
+#       any zero matrices are tracked seperately and noted rather than stored. This should speed things up.
+function get_Ak_matrices(V, U)
+    dims = model_geometry.unit_cell.n * model_geometry.lattice.N
+    Ak = Vector{Matrix{AbstractFloat}}(undef, length(V))  # Preallocate memory
+
+    # Generate matrix of perturbation theory energies
+    pt_energies = zeros(AbstractFloat, 2*dims, 2*dims)
+
+    for η in 1:2*dims
+        for ν in 1:2*dims
+            if η > Np || ν <= Np
+                pt_energies[η, ν] = 1.0 / ε[η] - ε[ν]
+            end
+        end
+    end
+
+    adjU = adjoint(U)
+    UadjU = U * adjU
+
+    # Preallocate matrices for in-place operations
+    result = zeros(size(U))
+
+    for (i, matrix_i) in enumerate(V)
+        # Perform matrix operations in-place
+        result .= UadjU * matrix_i * pt_energies
+        Ak[i] = U * result * adjU
+    end
+
+    return Ak
 end
+
+
 
 """
     get_equal_greens(M::Matrix{AbstractFloat}, D::Matrix{AbstractFloat}) 
     
-Returns the equal-time Green's function (overlap ratio) matrix W = MD⁻¹.
+Returns the equal-time Green's function (overlap ratios) matrix W by solving 
+DᵀWᵀ = Mᵀ using full pivot LU decomposition.
 
 """
 function get_equal_greens(M, D)
-    return M * inv(D)       # TODO: calculating a matrix inverse is an O(N³) operation
-end                         #       need to do: DᵀWᵀ = Mᵀ, which is 
+    # transpose M and D
+    Dt = transpose(D)
+    Mt = transpose(M)
 
+    # perform LU decomposition of Dᵀ
+    Ft = lu(Dt, Val(true))
 
-"""
-    is_invertible(D::Matrix{AbstractFloat}) 
-    
-Checks if given matrix is invertible by checking its rank.
+    # define W matrix
+    W = zeros(Np, 2*model_geometry.lattice.N)
 
-"""
-function is_invertible(D)
-    if size(D, 1) != size(D, 2)
-        return false
-    end
+    # solve the equation
+    Wt = Dt \ Mt      
 
-    return rank(D) == size(D, 1)
-end
+    # Update the entries of the W matrix
+    W = transpose(Wt)
+ 
+    return W                # TODO: need to check that the solution from the LU decomp is the same is the inverse
+                            # although a cursory test shows that this is true
+
+    # return M * inv(D)       # do not use unless for testing!!
+end                         
+                            
+
 
 # end # module
 

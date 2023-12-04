@@ -166,7 +166,7 @@ occupying a real lattice site i.
 
 """
 function number_operator(site, pconfig)
-    return pconfig[site],                                           # number of spin-down electrons
+    return pconfig[site],                                           # number of spin-up electrons
          pconfig[site+model_geometry.lattice.N],                    # number of spin-down electrons
          pconfig[site] + pconfig[site+model_geometry.lattice.N]     # total number of electrons on a site
 end

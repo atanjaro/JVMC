@@ -75,58 +75,87 @@ end
 
 
 """
-    measure_double_occ( )
+    measure_double_occ( pconfig::Vector{Int} )
 
-Measure the double occupancy ⟨n↑n↓⟩.
+Measure the average double occupancy ⟨D⟩ = N⁻¹ ∑ᵢ ⟨nᵢ↑nᵢ↓⟩.
 
 """
-function measure_double_occ()
-    return nothing
+function measure_double_occ(pconfig)
+    nup_ndn = 0.0
+
+    for i in 1:model_geometry.N
+        nup_ndn += number_operator(i,pconfig)[1]*(1-number_operator(i,pconfig)[2])
+    end
+    
+    return nup_ndn
+end
+
+
+
+
+"""
+    measure_n( site::Int )
+
+Measure the local particle density ⟨n⟩.
+
+"""
+function measure_n(site)
+    loc_den = number_operator(site,pconfig)[1] + 1 - number_operator(i,pconfig)[2]
+
+    return loc_den
 end
 
 
 """
-    measure_n( )
+    measure_ρ( site::int )
 
-Measure the average particle density ⟨n⟩.
+Measure the local excess hole density ⟨ρ⟩.
 
 """
-function measure_n()
-    return nothing
+function measure_ρ(site)
+    return 1 - measure_n(site)
 end
 
 
 """
-    measure_ρ( )
+    measure_s( site::Int )
 
-Measure the average excess hole density ⟨ρ⟩.
-
-"""
-function measure_ρ()
-    return nothing
-end
-
+Measure the local spin.
 
 """
-    measure_spin( )
+function measure_s()
+    loc_spn = number_operator(site,pconfig)[1] - 1 + number_operator(i,pconfig)[2]
 
-Measure the average spin along specified quantization axis ⟨Sz⟩ or ⟨Sx⟩.
-
-"""
-function measure_spin()
-    return nothing
+    return loc_spn
 end
 
 
 """
     measure_local_energy( )
 
-Measure the local variational energy.
+Measure the local variational energy. Returns the total local energy,
+local kinetic energy, and local Hubbard energy.
 
 """
 function measure_local_energy()
-    return nothing
-end
+
+    # calculate expectation value of kinetic energy
+    E_loc_kinetic = 0.0
+
+    # loop over different electrons k
+
+    # loop over nearest neighbors
+
+    # reverse sign if pht == true
+
+    # calculate Hubbard energy
+    E_loc_hubb = U * number_operator(site,pconfig)[1] *(1-number_operator(i,pconfig)[2])
+
+    # resultant local energy
+    E_loc = E_loc_kinetic + E_loc_hubb
+
+    return E_loc, E_loc_kinetic, E_loc_hubb
+endy
 
 
 
@@ -137,7 +166,12 @@ Measure the global variational energy ⟨E⟩.
 
 """
 function measure_global_energy()
-    return nothing
+
+    # account for bins
+
+    # average over all sites
+
+    return E_global
 end
 
 

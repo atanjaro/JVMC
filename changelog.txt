@@ -1,0 +1,16 @@
+Change log (11/30):
+
+Updated method of performing variational parameter derivative, slater_derivative() (VMC.jl) 
+Fixed Metropolis updating, metropolis(). propose_random_hop() deprecated (VMC.jl)
+Prototyped measurements (Measurements.jl)
+Updated get_equal_time_greens() to use LU factorization instead inversion (Hamiltonian.jl)
+Updated build_tight_binding_model() to only include chemical potential term if not being optimized(Hamiltonian.jl)
+Updated build_variational_terms() to also return variational operators, V (Hamiltonian.jl)
+Updated method of getting variational parameter matrices, get_Ak_matrices() (Hamiltonian.jl)
+Added VariationalParameter constructor and updated method of variational parameter definition (Hamiltonian.jl)
+Removed optimization flags. If parameter is named in vector, it will be optimized (Hamiltonian.jl)
+
+Change log (12/04):
+
+Created Utilities.jl to house various external matrix functions: diagonalize(), is_invertible(), complex_zeros()
+Created the complex_zeros() function to generalize matrices to have complex elements (Utilities.jl)

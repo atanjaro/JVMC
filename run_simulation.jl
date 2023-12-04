@@ -10,14 +10,15 @@ include("Hamiltonian.jl")
 include("ParticleConfiguration.jl")
 include("Jastrow.jl")
 include("VMC.jl")
+include("Utilities.jl")
 
 #############################
 ## DEFINE MODEL PARAMETERS ##
 #############################
 
 # define the size of the lattice
-Lx = 4
-Ly = 4
+Lx = 2
+Ly = 2
 
 # define initial electron density
 n̄ = 1.0
@@ -32,45 +33,45 @@ t = 1.0
 # next nearest neighbor hopping
 tp = 0.0
 
+# Hubbard-U
+U = 0.5
+
 # onsite energy
 # ε = 0.0
 
 # chemical potential
 μ = 3.0
-opt_μ = true
 
 # fugacity
 # μₚₕ = 0.0
 # opt_μₚₕ = true
 
 # TODO: read in initial variational parameter set
-# this will include both order parameters and Jastrow parameters
-# readin_parameters = false
-# path_to_parameters = /path/to/variational/parameters/
+# readin_vpars = false
+# path_to_vpars = /path/to/variational/parameters/
 
-# s-wave order parameter
-Δs = 0.3    # initial value
-opt_s  = true
+######################################
+##      VARIATIONAL PARAMTERS       ##
+######################################
+# μ: chemical potential
+# μₚₕ: fugacity
+# Δs: s-wave pairing
+# Δd: d-wave pairing 
+# Δa: antiferromagnetic (Neél) order
+# Δc: uniform charge order
+# Δcm: charge modulation stripe
+# Δsm: spin modulation stripe
 
-# d-wave order parameter
-Δd = 0.4    # initial value                            
-opt_d = false   
+# Δd + Δa: uniform d-wave
+# Δcm + Δsm: stripe order
 
-# anti-ferromagnetic (Neél) order parameter
-Δa = 0.5  # initial value
-opt_a = false 
+# parameters to be optimized
+parameters_to_optimize = ["μ", "Δs"]
+parameter_values = [μ, 0.3]
 
-# uniform charge order parameter
-Δc = 0.6  # intial value
-opt_c = false       
-
-# charge modulation parameter (stripe)
-Δcm = 0.5     # intial value
-opt_cm = false     
-
-# spin modulation parameter (stripe)
-Δsm = 0.5     # initial value
-opt_sm = false     
+# TODO: read in initial variational parameter set
+# readin_jpars = false
+# path_to_jpars = /path/to/jastrow/parameters/
 
 # initial electron density Jastrow parameter
 vᵢⱼ = 0.5
@@ -126,7 +127,6 @@ additional_info = Dict(
     "N_updates" => N_updates,
     "N_bins" => N_bins,
     "bin_size" => bin_size,
-    "Δs" => Δs,
     "local_acceptance_rate" => 0.0,
     "seed" => seed,
     "n_bar" => n̄
@@ -160,10 +160,10 @@ bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
 tight_binding_model = TightBindingModel([t,tp],μ)
 
 # initialize variational parameters
-variational_parameters = VariationalParameters(["μ","Δs"], [μ, Δs], [opt_μ, opt_s])
+variational_parameters = initialize_variational_parameters(parameters_to_optimize, parameter_values)
 
 # get particle numbers (use if initial density is specified)
-Np, Ne, nup, ndn = get_particle_numbers(n̄)
+(Np, Ne, nup, ndn) = get_particle_numbers(n̄)
 
 # get particle density (use if initial particle number if specified)
 # density, Np, Ne = get_particle_density(nup, ndn)
@@ -172,14 +172,18 @@ Np, Ne, nup, ndn = get_particle_numbers(n̄)
 ## SET-UP VMC SIMULATION ##
 ###########################
 
-# construct mean-field Hamiltonian
-H_mf = build_mean_field_hamiltonian()
+# construct mean-field Hamiltonian and return variational operators
+(H_mf, V) = build_mean_field_hamiltonian()
 
 # initialize Slater determinant state and initial particle configuration
-(D, pconfig, ε₀, M, U) = build_slater_determinant()  
+(D, pconfig, ε, ε₀, M, U) = build_slater_determinant()  
 
 # initialize uncorrelated phonon state and initial particle configuration
 # (P, phconfig) = build_phonon_state()
+
+# initialize variational parameter matrices
+As = get_Ak_matrices(V[1], U)
+Aμ = get_Ak_matrices(V[2], U)
 
 # initialize equal-time Green's function (W matrix)
 W = get_equal_greens(M, D)
@@ -192,6 +196,7 @@ W = get_equal_greens(M, D)
 
 # construct electron-phonon density Jastrow factor 
 # (init_pTvec, init_ppar_matrix, num_ppars) = build_jastrow_factor("electron-phonon")
+
 
 #############################
 ## INITIALIZE MEASUREMENTS ##
