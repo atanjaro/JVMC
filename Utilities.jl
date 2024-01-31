@@ -1,4 +1,11 @@
+# module Utilities
+
 using LinearAlgebra
+
+# export diagonalize
+# export is_invertible
+# export complex_zeros
+# export is_openshell
 
 """
     diagonalize( H::Matrix{AbstractFloat} ) 
@@ -39,4 +46,19 @@ Initialzies a zero matrix with complex type
 function complex_zeros( rows::Int, cols::Int)
     return zeros(Complex{AbstractFloat}, rows, cols)
 end
+
+
+"""
+    is_openshell( Np::Int, ε::Vector{AbstractFloat} ) 
+
+Checks whether configuration is open shell.
+
+"""
+function is_openshell(ε, Np)
+    return ε[Np + 1] - ε[Np] < 0.0001
+end
+
+
+# end # of module
+
 

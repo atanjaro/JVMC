@@ -6,11 +6,10 @@ using Test
 
 # export ModelGeometry
 # export TightBindingModel
-# export DeterminantalState
-# export VariationalParameters
+# export initialize_variational_parameters
 # export build_mean_field_hamiltonian
 # export build_slater_determinant
-
+# export get_Ak_matrices
 
 
 """
@@ -100,12 +99,12 @@ function build_tight_binding_model(tight_binding_model)
     nbr_table = build_neighbor_table(bonds[1],
                                     model_geometry.unit_cell,
                                     model_geometry.lattice)
-    H_t = complex_zeros(2*dims, 2*dims)
-    H_tp = complex_zeros(2*dims, 2*dims)
+    H_t = zeros(AbstractFloat, 2*dims, 2*dims)
+    H_tp = zeros(AbstractFloat, 2*dims, 2*dims)
     μ_vec = Vector{AbstractFloat}(undef, 2*dims)
     if pht == true
         # particle-hole transformed chemical potential
-        if !("μ" in parameters_to_optimize)
+        if !("μ" in parameters_to_optimize)     
             for i in 1:dims
                 for j in dims+1:2*dims
                     μ_vec[i] = -tight_binding_model.μ
@@ -114,21 +113,47 @@ function build_tight_binding_model(tight_binding_model)
             end
         end
         # particle-hole transformed nearest neighbor hopping
-        if model_geometry.lattice.N == 4
+        if Lx == 2 && Ly == 2 
             for (i,j) in eachcol(nbr_table)
                 H_t[i,j] += -tight_binding_model.t[1]
-                if ndims(model_geometry.lattice) == 1       # for a 1D lattice
-                    H_t[j,i] += -tight_binding_model.t[1]   
-                else
-                end
             end
             for (i,j) in eachcol(nbr_table .+ model_geometry.lattice.N)    
                 H_t[i,j] += tight_binding_model.t[1]
-                if ndims(model_geometry.lattice) == 1       # for a 1D lattice
-                    H_t[j,i] += tight_binding_model.t[1]   
-                else
+            end
+        # special case for 1D
+        elseif  Lx == 1 && Ly > Lx || Ly == 1 && Lx > Ly
+            for (i,j) in eachcol(nbr_table[:,1:model_geometry.lattice.N])
+                H_t[i,j] += -tight_binding_model.t[1]
+                if model_geometry.lattice.N > 2
+                    H_t[j,i] += -tight_binding_model.t[1]
                 end
             end
+            for (i,j) in eachcol(nbr_table[:,1:model_geometry.lattice.N] .+ model_geometry.lattice.N)    
+                H_t[i,j] += tight_binding_model.t[1]
+                if model_geometry.lattice.N > 2
+                    H_t[j,i] += tight_binding_model.t[1]
+                end
+            end
+        # special case for Lx = 2 
+        elseif Lx == 2 && Ly > Lx
+            for (i,j) in eachcol(nbr_table[:,1:(size(nbr_table,2) - Ly)])
+                H_t[i,j] += -tight_binding_model.t[1]
+                H_t[j,i] += -tight_binding_model.t[1]
+            end
+            for (i,j) in eachcol(nbr_table[:,1:(size(nbr_table,2) - Ly)] .+ model_geometry.lattice.N)
+                H_t[i,j] += tight_binding_model.t[1]
+                H_t[j,i] += tight_binding_model.t[1]
+            end 
+        # special case for Ly = 2 
+        elseif Ly == 2 && Lx > Ly
+            for (i,j) in eachcol(nbr_table[:,1:(size(nbr_table,2) - Lx)])
+                H_t[i,j] += -tight_binding_model.t[1]
+                H_t[j,i] += -tight_binding_model.t[1]
+            end
+            for (i,j) in eachcol(nbr_table[:,1:(size(nbr_table,2) - Lx)] .+ model_geometry.lattice.N)
+                H_t[i,j] += tight_binding_model.t[1]
+                H_t[j,i] += tight_binding_model.t[1]
+            end 
         else
             for (i,j) in eachcol(nbr_table)
                 H_t[i,j] += -tight_binding_model.t[1]
@@ -150,7 +175,7 @@ function build_tight_binding_model(tight_binding_model)
             nbr_table_p = build_neighbor_table(bonds[2],
                                             model_geometry.unit_cell,
                                             model_geometry.lattice)
-            if model_geometry.lattice.N == 4
+            if Lx == 2 && Ly == 2
                 for (i,j) in eachcol(nbr_table_p)
                     H_tp[i,j] += tight_binding_model.t[2]/2
                 end
@@ -163,8 +188,8 @@ function build_tight_binding_model(tight_binding_model)
                     H_tp[j,i] += tight_binding_model.t[2]
                 end
                 for (i,j) in eachcol(nbr_table_p .+ model_geometry.lattice.N)    
-                H_tp[i,j] += -tight_binding_model.t[2]
-                H_tp[j,i] += -tight_binding_model.t[2]
+                    H_tp[i,j] += -tight_binding_model.t[2]
+                    H_tp[j,i] += -tight_binding_model.t[2]
                 end
             end
         else
@@ -180,21 +205,47 @@ function build_tight_binding_model(tight_binding_model)
             end
         end
         # nearest neighbor hopping
-        if model_geometry.lattice.N == 4
+        if Lx == 2 && Ly == 2 
             for (i,j) in eachcol(nbr_table)
                 H_t[i,j] += -tight_binding_model.t[1]
-                if ndims(model_geometry.lattice) == 1       # for a 1D lattice
-                    H_t[j,i] += -tight_binding_model.t[1]   
-                else
-                end
             end
             for (i,j) in eachcol(nbr_table .+ model_geometry.lattice.N)    
                 H_t[i,j] += -tight_binding_model.t[1]
-                if ndims(model_geometry.lattice) == 1       # for a 1D lattice
+            end
+        # special case for 1D  
+        elseif  Lx == 1 && Ly > Lx || Ly == 1 && Lx > Ly
+            for (i,j) in eachcol(nbr_table[:,1:model_geometry.lattice.N])
+                H_t[i,j] += -tight_binding_model.t[1]
+                if model_geometry.lattice.N > 2
                     H_t[j,i] += -tight_binding_model.t[1]
-                else
                 end
             end
+            for (i,j) in eachcol(nbr_table[:,1:model_geometry.lattice.N] .+ model_geometry.lattice.N)    
+                H_t[i,j] += -tight_binding_model.t[1]
+                if model_geometry.lattice.N > 2
+                    H_t[j,i] += -tight_binding_model.t[1]
+                end
+            end
+        # special case for Lx = 2 
+        elseif Lx == 2 && Ly > Lx
+            for (i,j) in eachcol(nbr_table[:,1:(size(nbr_table,2) - Ly)])
+                H_t[i,j] += -tight_binding_model.t[1]
+                H_t[j,i] += -tight_binding_model.t[1]
+            end
+            for (i,j) in eachcol(nbr_table[:,1:(size(nbr_table,2) - Ly)] .+ model_geometry.lattice.N)
+                H_t[i,j] += -tight_binding_model.t[1]
+                H_t[j,i] += -tight_binding_model.t[1]
+            end 
+        # special case for Ly = 2 
+        elseif Ly == 2 && Lx > Ly
+            for (i,j) in eachcol(nbr_table[:,1:(size(nbr_table,2) - Lx)])
+                H_t[i,j] += -tight_binding_model.t[1]
+                H_t[j,i] += -tight_binding_model.t[1]
+            end
+            for (i,j) in eachcol(nbr_table[:,1:(size(nbr_table,2) - Lx)] .+ model_geometry.lattice.N)
+                H_t[i,j] += -tight_binding_model.t[1]
+                H_t[j,i] += -tight_binding_model.t[1]
+            end  
         else
             for (i,j) in eachcol(nbr_table)
                 H_t[i,j] += -tight_binding_model.t[1]
@@ -216,7 +267,7 @@ function build_tight_binding_model(tight_binding_model)
             nbr_table_p = build_neighbor_table(bonds[2],
                                             model_geometry.unit_cell,
                                             model_geometry.lattice)
-            if model_geometry.lattice.N == 4
+            if Lx == 2 && Ly ==2 
                 for (i,j) in eachcol(nbr_table_p)
                     H_tp[i,j] += tight_binding_model.t[2]/2
                 end
@@ -255,13 +306,13 @@ matrices and a vector of individual matrix terms.
 function build_variational_terms(variational_parameters)
     dims = model_geometry.unit_cell.n*model_geometry.lattice.N
     vparam_map = map_variational_parameters(variational_parameters) 
-    Hs = complex_zeros(2*dims, 2*dims)
-    Hd = complex_zeros(2*dims, 2*dims)    
-    Ha = complex_zeros(2*dims, 2*dims)    
-    Hc = complex_zeros(2*dims, 2*dims) 
-    Hμ = complex_zeros(2*dims, 2*dims)      
-    # Hcs = complex_zeros(2*dims, 2*dims)
-    # Hss = complex_zeros(2*dims, 2*dims)    
+    Hs = zeros(AbstractFloat, 2*dims, 2*dims)
+    Hd = zeros(AbstractFloat, 2*dims, 2*dims)    
+    Ha = zeros(AbstractFloat, 2*dims, 2*dims)    
+    Hc = zeros(AbstractFloat, 2*dims, 2*dims) 
+    Hμ = zeros(AbstractFloat, 2*dims, 2*dims)      
+    # Hcs = zeros(AbstractFloat, 2*dims, 2*dims)
+    # Hss = zeros(AbstractFloat, 2*dims, 2*dims)    
     H_vpars = []
     V = []
     if haskey(vparam_map, "Δs") == true
@@ -399,13 +450,13 @@ end
 
 
 """
-    build_slater_determinant() 
+    build_determinantal_state() 
 
 Returns initial energies ε_init, matrix M, and Slater matrix D in 
 the many-particle configuration basis with associated initial energies. 
 
 """
-function build_slater_determinant()
+function build_determinantal_state()
     # diagonalize Hamiltonian
     ε, U = diagonalize(H_mf) 
     if is_openshell(ε,Np) == true
@@ -452,92 +503,29 @@ end
 
 
 """
-    is_openshell( Np::Int, ε::Vector{AbstractFloat} ) 
-
-Checks whether configuration is open shell.
-
-"""
-function is_openshell(ε, Np)
-    return ε[Np + 1] - ε[Np] < 0.0001
-end
-
-
-"""
-    get_Ak_matrices( V::Vector{Matrix{AbstractFloat}}, U::Matrix{AbstractFloat} ) 
+    get_Ak_matrices( V::Vector{Matrix{AbstractFloat}}, U::Matrix{AbstractFloat}, ε::Vector{AbstractFloat}, model_geometry::ModelGeometry ) 
     
-Returns variational parameter matrix Aₖ. Compute Qₖ = (U⁺VₖU)_(ην) / (ε_η - ε_ν), for η > Nₚ and ν ≤ Nₚ and is 0 otherwise
-(η and ν run from 1 to 2L). Vₖ is the bare matrix of the kth variational parameter i.e. H_vpar. 
+Returns variational parameter matrices Aₖ from the corresponding Vₖ. Computes Qₖ = (U⁺VₖU)_(ην) / (ε_η - ε_ν), for η > Nₚ and ν ≤ Nₚ and is 0 otherwise
+(η and ν run from 1 to 2L)
 
 """
-# This function is DEAD slow for systems greater than 16 sites. 
-# TODO: Since most of the matrices being written are zero matrices, this occupies way too much of the memory in 
-#       the end. This operation needs to changed such that the non-zero matricies are written to Ak (and tracked) while 
-#       any zero matrices are tracked seperately and noted rather than stored. This should speed things up.
-function get_Ak_matrices(V, U)
+function get_Ak_matrices(V, U, ε, model_geometry)
     dims = model_geometry.unit_cell.n * model_geometry.lattice.N
-    Ak = Vector{Matrix{AbstractFloat}}(undef, length(V))  # Preallocate memory
+    A = Vector{Matrix{AbstractFloat}}()
+    adjU = adjoint(U)
 
     # Generate matrix of perturbation theory energies
-    pt_energies = zeros(AbstractFloat, 2*dims, 2*dims)
+    pt_energies = 1.0 ./ ε[1:2*dims]' .- ε[1:2*dims]
 
-    for η in 1:2*dims
-        for ν in 1:2*dims
-            if η > Np || ν <= Np
-                pt_energies[η, ν] = 1.0 / ε[η] - ε[ν]
-            end
-        end
+    # iterate over each Vₖ for each variational parameter
+    for i in V
+        push!(A, U * (adjU * i * U * pt_energies) * adjU)
     end
 
-    adjU = adjoint(U)
-    UadjU = U * adjU
-
-    # Preallocate matrices for in-place operations
-    result = zeros(size(U))
-
-    for (i, matrix_i) in enumerate(V)
-        # Perform matrix operations in-place
-        result .= UadjU * matrix_i * pt_energies
-        Ak[i] = U * result * adjU
-    end
-
-    return Ak
+    return A
 end
 
-
-
-"""
-    get_equal_greens(M::Matrix{AbstractFloat}, D::Matrix{AbstractFloat}) 
-    
-Returns the equal-time Green's function (overlap ratios) matrix W by solving 
-DᵀWᵀ = Mᵀ using full pivot LU decomposition.
-
-"""
-function get_equal_greens(M, D)
-    # transpose M and D
-    Dt = transpose(D)
-    Mt = transpose(M)
-
-    # perform LU decomposition of Dᵀ
-    Ft = lu(Dt, Val(true))
-
-    # define W matrix
-    W = zeros(Np, 2*model_geometry.lattice.N)
-
-    # solve the equation
-    Wt = Dt \ Mt      
-
-    # Update the entries of the W matrix
-    W = transpose(Wt)
- 
-    return W                # TODO: need to check that the solution from the LU decomp is the same is the inverse
-                            # although a cursory test shows that this is true
-
-    # return M * inv(D)       # do not use unless for testing!!
-end                         
-                            
-
-
-# end # module
+# end # of module
 
 
 

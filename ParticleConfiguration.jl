@@ -200,6 +200,7 @@ If a particle 'β' at site 'k' successfully hops to a neighboring site 'l', upda
 position in 'particle_positions' as well as 'pconfig.
 
 """
+# TODO: need to update
 function update_particle_position!(particle_positions, proposed_hop)
     if proposed_hop.acceptance == true
         particle_positions[proposed_hop.particle][1] = get_spindices_from_index(proposed_hop.fsite)[proposed_hop.spin]

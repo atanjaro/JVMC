@@ -1,5 +1,16 @@
-Change log (11/30):
+(updated 01/19):
+TODO: set initial Jastrow parameters to 0.0, unless read-in values are specified
+TODO: add method to update Jastrow pseudopotentials (specifically update jpar_matrix) and track it's history over N_updates
+TODO: add method to update vparr and track it's history over N_updates
+TODO: need to loop over number of vpars being optimized during local_update!()
+TODO: add test for parameter convergence
+TODO: update neighbor loop in measure_local_energy()
+TODO: change parameters to be optimized to a NamedTuple
 
+------------------------------------------------------------------------------------------------------------------------------
+
+
+Change log (11/30):
 Updated method of performing variational parameter derivative, slater_derivative() (VMC.jl) 
 Fixed Metropolis updating, metropolis(). propose_random_hop() deprecated (VMC.jl)
 Prototyped measurements (Measurements.jl)
@@ -11,6 +22,40 @@ Added VariationalParameter constructor and updated method of variational paramet
 Removed optimization flags. If parameter is named in vector, it will be optimized (Hamiltonian.jl)
 
 Change log (12/04):
-
 Created Utilities.jl to house various external matrix functions: diagonalize(), is_invertible(), complex_zeros()
 Created the complex_zeros() function to generalize matrices to have complex elements (Utilities.jl)
+
+
+Change log (12/05):
+Moved all Green's function related functions to Greens.jl
+Moved is_open_shell() to Utilities.jl
+Added method for updating equal-time Green's function (Greens.jl)
+
+Change log (12/07):
+Fixed bug where matrices when Lx or Ly = 1, 2 and Lx > Ly or Ly > Lx were being written incorrectly.
+Created StochasticReconfiguration.jl to house all functions pertaining to SR. 
+VMC.jl now only has stuff pertaining to local updates.
+Changed build_slater_determinant() to build_determinantal_state(), as this is more accurate (Hamiltonian.jl)
+Changed local_slater_derivative() to local_determinantal_derivative(), as it is more accurate (StochasticReconfiguration.jl)
+
+
+Change log (01/10):
+Created function prototypes related to SR/parameter updating including get_SR_matrix(), get_SR_forces(), parameter_gradient(), and parameter_update!() (StochasticReconfiguration.jl)
+Fixed implementation get_Ak_matrices(), which also fixes the scaling issue (Hamiltonian.jl)
+Updated local_determinantal_derivative() and local_jastrow_derivative() methods (StochasticReconfiguration.jl)
+Created the Jastrow type (Jastrow.jl)
+Updated build_jastrow_factor() method. Function now creates an instance of the Jastrow type (Jastrow.jl)
+
+Change log (01/11):
+Updated the definition of 'η' to rflect its role as a a stabilization factor. Added 'dt', which is the initial SR optimization rate (run_simulation.jl)
+Upadted measure_double_occ(), measure_local_energy() (Measurements.jl)
+Changed get_SR_matrix() to get_SR_comatrix() (StochasticReconfiguration.jl)
+
+Change log (01/19):
+Updated do_particle_hop!() (VMC.jl)
+
+Changelog (01/24):
+Updated recalc_equal_greens() and added maximum allowed error in Green's function as a stabilization factor (Greens.jl and run_simulation.jl)
+Added recalc_Tvec() for numerical stabilization (Jastrow.jl)
+Updated measurment initialization (Measurments.jl)
+

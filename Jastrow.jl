@@ -1,7 +1,24 @@
+# module Jastrow
+
 using LatticeUtilities
 using LinearAlgebra
 using DelimitedFiles
 using Distances
+
+# export build_jastrow_factor
+# export get_Tvec
+# export update_Tvec
+
+struct Jastrow
+    # type of Jastrow parameter
+    jastrow_type::AbstractString
+    # T vector
+    Tvec::Vector{AbstractFloat}
+    # Jastrow parameter matrix
+    jpar_matrix::Matrix{AbstractFloat}
+    # number of Jastrow parameters
+    num_jpars::Int
+end
 
 # a matrix of distances between each and every site is generated with
 # each matrix element corresponds to a distance i.e. r₁₂ == distance between sites 1 and 2
@@ -48,8 +65,8 @@ function set_jpars!(dist_matrix)
                 dist_matrix[i,j] = 0
             elseif i == j
                 dist_matrix[i,j] == 0  
-            else # change according to Jastrow type
-                dist_matrix[i,j] = vᵢⱼ
+            else
+                dist_matrix[i,j] = 0.5
             end
         end
     end
@@ -106,7 +123,7 @@ end
 Updates elements Tᵢ of the vector T after a Metropolis update.
 
 """
-function update_Tvec!(l::Int, k::Int, Tvec)
+function update_Tvec!(l, k, Tvec)
     for i in 1:L
         Tvec[i] += (jpar_matrix[i,l] - jpar_matrix[i,k]) 
     end
@@ -148,10 +165,36 @@ function build_jastrow_factor(jastrow_type)
     end
     init_Tvec = get_Tvec(jpar_matrix,jastrow_type)
 
-    return init_Tvec, jpar_matrix, num_jpars
+    return Jastrow(jastrow_type, init_Tvec, jpar_matrix, num_jpars)
 end
 
 
+"""
+    recalc_Tvec(Tᵤ::Vector{AbstractFloat}, δT::AbstractFloat)
+
+Checks floating point error accumulation in the T vector and if ΔT < δT, 
+then the recalculated T vector Tᵣ replaces the updated T vector Tᵤ.
+
+"""
+function recalc_Tvec(Tᵤ, δT)
+    Tᵣ = get_Tvec(jpar_matrix, jastrow_type)
+    # ΔT = sqrt(sum( (Tᵤ-Tᵣ)^2 )/sum(Tᵣ))     
+    if ΔT > δT
+        if verbose == true
+            println("WARNING! T vector has been recalculated: ΔT = ", ΔT, " > δT = ", δT)
+        end
+        return Tᵣ, ΔT
+
+    else # ΔT < δT
+        if verbose == true
+            println("T vector is stable: ΔT = ", ΔT, " > δT = ", δT)
+        end
+        return Tᵤ, ΔT
+    end  
+end
+
+
+# end # of module
 
 
 

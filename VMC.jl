@@ -36,60 +36,6 @@ function local_acceptance()
 end
 
 
-"""
-    local_jastrow_derivative(jpar_indices::CartesianIndex{2}, pconfig::Vector{AbstractFloat, jastrow_type::AbstractString)
-
-Performs local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂vₗₘ, with respect
-to the kth Jastrow parameter vₗₘ.
-
-"""
-function local_jastrow_derivative(jpar_indices, pconfig, jastrow_type)
-    if jastrow_type == "density"
-        if pht == true
-            Δₖ = -(number_operator(jpar_indices[1],pconfig)[1] - number_operator(jpar_indices[1],pconfig)[2])*(number_operator(jpar_indices[2],pconfig)[1] - number_operator(jpar_indices[2],pconfig)[2])
-        else
-            Δₖ = -(number_operator(jpar_indices[1],pconfig)[1] + number_operator(jpar_indices[1],pconfig)[2])*(number_operator(jpar_indices[2],pconfig)[1] + number_operator(jpar_indices[2],pconfig)[2])
-        end
-    elseif jastrow_type == "spin"
-        if pht == true
-            Δₖ = -0.5 * (number_operator(jpar_indices[1],pconfig)[1] + number_operator(jpar_indices[1],pconfig)[2])*(number_operator(jpar_indices[2],pconfig)[1] + number_operator(jpar_indices[2],pconfig)[2])
-        else
-            Δₖ = -0.5 * (number_operator(jpar_indices[1],pconfig)[1] - number_operator(jpar_indices[1],pconfig)[2])*(number_operator(jpar_indices[2],pconfig)[1] - number_operator(jpar_indices[2],pconfig)[2])
-        end
-    elseif jastrow_type == "electron-phonon"
-        # derivative of electron-phonon Jastrow factor
-    else
-    end
-    return Δₖ
-end
-
-
-
-"""
-    local_slater_derivative(vpar_indices::CartesianIndex{2}, A::Matrix{AbstractFloat}, W::Matrix{AbstractFloat})
-
-Performs local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂αₖ, with respect
-to the kth variational parameter αₖ, in the determinantal part of the wavefunction.
-
-"""
-function local_slater_derivative(Ak, W, acceptance)
-    iᵦ = acceptance.isite
-    # j = acceptance.fsite
-
-    Δₖ = 0.0
-
-    # sum over number of particles
-    for β in 1:Np
-        # sum over lattice sites for the up and down sectors
-        for j in 1:2*model_geometry.lattice.N
-            Δₖ += Ak[iᵦ,j]*W[j,β]
-        end
-    end
-
-    return Δₖ
-end
-
-
 ## DEPRECATED
 # """
 #     propose_random_hop( particle_positions::Vector{Dict{Any,Any}} )
@@ -154,7 +100,7 @@ function metropolis(particle_positions)
             println("HOP POSSIBLE!")
         end
 
-        # Metropolis algorithm
+        # begin Metropolis algorithm
 
         # get Jastrow ratio (element of T vector)
         Rⱼ = T[k,l]        # TODO: use views to obtain element?
@@ -184,27 +130,23 @@ end
 
 
 """
-    do_particle_hop!( pconfig::Matrix{Int}, proposed_hop:: )
+    do_particle_hop!( local_acceptance::LocalAcceptance, pconfig::Matrix{Int})
 
 If proposed particle hop is accepted, perform the particle hop.
 
 """
-function do_particle_hop!(pconfig, proposed_hop)
+function do_particle_hop!(proposed_hop, pconfig)
     if proposed_hop.acceptance == true
-        # HOP!
-        k_spindex = get_spindices_from_index(proposed_hop.isite)[proposed_hop.spin]
-        l_spindex = get_spindices_from_index(proposed_hop.fsite)[proposed_hop.spin]
+        k = proposed_hop.isite
+        l = proposed_hop.fsite
 
-        @assert pconfig[k_spindex] == 1
-        pconfig[k_spindex] = 0
-        @assert pconfig[l_spindex] == 0
-        pconfig[l_spindex] = 1
-        
-        return pconfig 
-    else 
-        # DO NOTHING
-        return nothing
-    end
+        # HOP!
+        pconfig[k] = 0
+        pconfig[l] = 1
+
+        return pconfig
+    else
+        return pconfig
 end
 
 
@@ -216,71 +158,33 @@ if accepted, updates particle positions, T vector, W matrix, and variational par
 
 """
 function local_update!()
-    pconfig = do_particle_hop(pconfig, proposed_hop)
-    particle_positions = update_particle_position!(particle_positions, proposed_hop)
 
     # accept/reject (Metropolis)
     proposed_hop = metropolis(particle_positions)
 
-    # update paticle positions
-    do_particle_hop!(pconfig, proposed_hop)
+    # perform hopping
+    pconfig = do_particle_hop!(proposed_hop, pconfig)
+
+    # update particle positions
+    update_particle_position!(particle_positions, proposed_hop)
 
     # update T vector
-    #Tvec[] = 
+    T_vec = update_Tvec!(LocalAcceptance.fsite, LocalAcceptance.isite, Tvec)
+
+    # update Jastrow pseudopotentials
+     # need to account for number of parameters being optimized
+    # need to update value of parameter, as well as keep track of it's history over the N_updates
 
     # update Green's function
-    #W[] = 
+    W = update_equal_greens!(local_acceptance)
 
-    # update parameters
-    #vpars = []
+    # update variational parameters
+    vpar = parameter_update!()
+    # need to account for number of parameters being optimized
+    # need to update value of parameter, as well as keep track of it's history over the N_updates
+    # perhaps store the histories in a num_vaprs by N_updates matrix?
     
-    return nothing
+    return acceptance_rate, W, Tvec, vpar
 end
 
-
-"""
-    parameter_gradient(vpar)
-
-Perform gradient descent on variational parameters for Stochastic 
-Reconfiguration.
-
-"""
-function parameter_gradient(vpar_matrices, jpar_matrix, pconfig)
-    # perform gradient descent on Jastrow parameters
-    num_jpars = get_num_jpars(jpar_matrix)
-    jpar_indices = get_parameter_indices(jpar_matrix)
-    for k in 1:2*num_jpars
-        Δₖ = local_jastrow_derivative(jpar_indices[k],pconfig,type)
-    end
-    # perform gradient descent on variational parameters
-
-    return nothing
-end
-
-
-"""
-    parameter_update!()
-
-Update variational parameters.
-
-"""
-function parameter_update!()
-    return nothing
-end
-
-
-
-"""
-    parameter_indices()
-
-Get indices of variational parameters from its respective matrix.
-
-"""
-function get_parameter_indices(par_matrix)
-    nonzero_indices = findall(x -> x != 0, par_matrix)
-
-    parameter_indices = sort(nonzero_indices, by=x->(x[1], x[2]))
-
-    return parameter_indices
-end ## TODO: move to Jastrow.jl?
 

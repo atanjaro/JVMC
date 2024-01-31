@@ -4,6 +4,7 @@ using LinearAlgebra
 using Test
 using DelimitedFiles
 using BenchmarkTools
+using Profile
 
 # files to include
 include("Hamiltonian.jl")
@@ -11,6 +12,8 @@ include("ParticleConfiguration.jl")
 include("Jastrow.jl")
 include("VMC.jl")
 include("Utilities.jl")
+include("Greens.jl")
+include("StochasticReconfiguration.jl")
 
 #############################
 ## DEFINE MODEL PARAMETERS ##
@@ -44,7 +47,6 @@ U = 0.5
 
 # fugacity
 # μₚₕ = 0.0
-# opt_μₚₕ = true
 
 # TODO: read in initial variational parameter set
 # readin_vpars = false
@@ -59,31 +61,19 @@ U = 0.5
 # Δd: d-wave pairing 
 # Δa: antiferromagnetic (Neél) order
 # Δc: uniform charge order
-# Δcm: charge modulation stripe
-# Δsm: spin modulation stripe
+# Δcs: charge stripe
+# Δss: spin stripe
 
 # Δd + Δa: uniform d-wave
 # Δcm + Δsm: stripe order
 
 # parameters to be optimized
-parameters_to_optimize = ["μ", "Δs"]
-parameter_values = [μ, 0.3]
+parameters_to_optimize = ["Δs", "μ"]
+parameter_values = [0.3, μ]
 
 # TODO: read in initial variational parameter set
 # readin_jpars = false
 # path_to_jpars = /path/to/jastrow/parameters/
-
-# initial electron density Jastrow parameter
-vᵢⱼ = 0.5
-
-# initial electron spin Jastrow parameter
-wᵢⱼ = 0.5
-
-# initial phonon density Jastrow parameter
-# pᵢⱼ = 0.5
-
-# initial electron-phonon density Jastrow parameter
-# uᵢⱼ = 0.5
 
 
 ##################################
@@ -111,8 +101,19 @@ N_bins = 100
 # bin size
 bin_size = div(N_updates, N_bins)
 
-# optimization rate
-η = 0.0001
+# Maximum allowed error in the equal-time Green's function
+# which is corrected by numerical stabilization
+δW = 1e-3
+
+# Maximum allowed error in the T vector
+# which is corrected by numerical stabilization
+δT = 1e-3
+
+# SR stabilization factor
+η = 1e-4      # 10⁻⁴ is probably good good for the Hubbard model
+
+# initial SR optimization rate
+dt = 0.1        # dt must be of sufficient size such that convergence is rapid and the algorithm remains stable
 
 # whether to output to terminal during runtime
 verbose = true
@@ -122,12 +123,16 @@ write = false
 
 # initialize addition simulation information dictionary
 additional_info = Dict(
+    "δW" => δW,
+    "δT" => δT,
     "time" => 0.0,
     "N_burnin" => N_burnin,
     "N_updates" => N_updates,
     "N_bins" => N_bins,
     "bin_size" => bin_size,
     "local_acceptance_rate" => 0.0,
+    "initial_dt" => dt,
+    "final_dt" => final_dt,
     "seed" => seed,
     "n_bar" => n̄
 )
@@ -176,26 +181,25 @@ variational_parameters = initialize_variational_parameters(parameters_to_optimiz
 (H_mf, V) = build_mean_field_hamiltonian()
 
 # initialize Slater determinant state and initial particle configuration
-(D, pconfig, ε, ε₀, M, U) = build_slater_determinant()  
+(D, pconfig, ε, ε₀, M, U) = build_determinantal_state()  
 
 # initialize uncorrelated phonon state and initial particle configuration
 # (P, phconfig) = build_phonon_state()
 
 # initialize variational parameter matrices
-As = get_Ak_matrices(V[1], U)
-Aμ = get_Ak_matrices(V[2], U)
+A = get_Ak_matrices(V, U, ε, model_geometry)
 
 # initialize equal-time Green's function (W matrix)
 W = get_equal_greens(M, D)
 
 # construct density Jastrow factor
-(init_dTvec, init_dpar_matrix, num_dpars) = build_jastrow_factor("density")
+density_jastrow = build_jastrow_factor("density")
 
 # construct spin Jastrow factor 
-(init_sTvec, init_spar_matrix, num_spars) = build_jastrow_factor("spin")
+spin_jastrow = build_jastrow_factor("spin")
 
 # construct electron-phonon density Jastrow factor 
-# (init_pTvec, init_ppar_matrix, num_ppars) = build_jastrow_factor("electron-phonon")
+# eph_jastrow = build_jastrow_factor("electron-phonon")
 
 
 #############################
@@ -227,13 +231,17 @@ for n in 1:N_burnin
     # perform local updates to electron dofs
     # electron_local_update!()
 
+    # record acceptance rate
+
     # perform local updates to phonon dofs
     # phonon_local_updates
+
+    # record acceptance rate
 end
 
 # recompute W and Tvec(s) for numerical stabilization
 
-# Iterate over the number of bin, i.e. the number of time measurements will be dumped to file.
+# Iterate over the number of bins, i.e. the number of measurements will be dumped to file.
 for bin in 1:N_bins
 
     # Iterate over the number of updates and measurements performed in the current bin.
@@ -241,8 +249,12 @@ for bin in 1:N_bins
         # perform local updates to electron dofs
         # electron_local_update!()
 
+        # record acceptance rate
+
         # perform local updates to phonon dofs
         # phonon_local_update!()
+
+        # record acceptance rate
     end
 
     # Write the average measurements for the current bin to file.
