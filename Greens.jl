@@ -67,9 +67,23 @@ and if ΔW < δW, then the recalculated Green's function
 Wᵣ replaces the updated Green's function Wᵤ.
 
 """
-function recalc_equal_greens(Wᵤ, δW)
+function recalc_equal_greens(Wᵤ, δW, model_geometry)
+    L = model_geometry.lattice.N
     Wᵣ = get_equal_greens(M, D)
-    # ΔW = sqrt(sum( (Wᵤ-Wᵣ)^2 )/sum(Wᵣ))     
+    diff = Wᵤ-Wᵣ
+
+    diff_sum = 0.0
+    W_sum = 0.0
+
+    for i in 1:2*L
+        for α in 1:Np
+            diff_sum += sum(diff[i,α])
+            W_sum += sum(Wᵣ[i,α])
+        end
+    end
+
+    ΔW = sqrt(diff_sum/W_sum)
+
     if ΔW > δW
         if verbose == true
             println("WARNING! Green's function has been recalculated: ΔW = ", ΔW, " > δW = ", δW)

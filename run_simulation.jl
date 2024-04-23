@@ -14,6 +14,7 @@ include("VMC.jl")
 include("Utilities.jl")
 include("Greens.jl")
 include("StochasticReconfiguration.jl")
+include("Measurements.jl")
 
 #############################
 ## DEFINE MODEL PARAMETERS ##
@@ -71,9 +72,9 @@ U = 0.5
 parameters_to_optimize = ["Δs", "μ"]
 parameter_values = [0.3, μ]
 
-# TODO: read in initial variational parameter set
-# readin_jpars = false
-# path_to_jpars = /path/to/jastrow/parameters/
+# TODO: option to read in initial variational parameter set
+# readin_vpars = false
+# path_to_vpars = /path/to/jastrow/parameters/
 
 
 ##################################
@@ -118,7 +119,7 @@ dt = 0.1        # dt must be of sufficient size such that convergence is rapid a
 # whether to output to terminal during runtime
 verbose = true
 
-# whether to output matrices to files
+# whether to output matrices to file
 write = false
 
 # initialize addition simulation information dictionary
@@ -132,7 +133,7 @@ additional_info = Dict(
     "bin_size" => bin_size,
     "local_acceptance_rate" => 0.0,
     "initial_dt" => dt,
-    "final_dt" => final_dt,
+    "final_dt" => 0.0,
     "seed" => seed,
     "n_bar" => n̄
 )
@@ -164,8 +165,8 @@ bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
 # define non-interacting tight binding model
 tight_binding_model = TightBindingModel([t,tp],μ)
 
-# initialize variational parameters
-variational_parameters = initialize_variational_parameters(parameters_to_optimize, parameter_values)
+# initialize determinantal parameters
+determinantal_parameters = initialize_determinantal_parameters(parameters_to_optimize, parameter_values)
 
 # get particle numbers (use if initial density is specified)
 (Np, Ne, nup, ndn) = get_particle_numbers(n̄)

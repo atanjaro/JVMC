@@ -2,116 +2,101 @@
 
 using LinearAlgebra
 
-"""
-    local_jastrow_derivative(jastrow::Jastrow, pconfig::Vector{AbstractFloat}, jastrow_type::AbstractString)
+# # for the covariance matrix...
+# # initial sum for a single element f
+# ΔkΔp = 0.0
 
-Performs local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂vₗₘ, with respect
-to the kth Jastrow parameter vₗₘ.
+# # stuff happens here...
 
-"""
-function local_jastrow_derivative(jastrow, pconfig, model_geometry)
-    if jastrow.jastrow_type == "density"
-        result = zeros(AbstractFloat, jastrow.num_jpars)
-        for jpar in 1:jastrow.num_jpars
-            for i in 1:model_geometry.lattice.N
-                for j in 1:model_geometry.lattice.N
-                    if pht == true
-                        result[jpar] = -(number_operator(i,pconfig)[1] - number_operator(i,pconfig)[2])*(number_operator(j,pconfig)[1] - number_operator(j,pconfig)[2])
-                    else
-                        result[jpar] = -(number_operator(i,pconfig)[1] + number_operator(i,pconfig)[2])*(number_operator(j,pconfig)[1] + number_operator(j,pconfig)[2])
-                    end
-                end
-            end
-        end
-    elseif jastrow_type == "spin"
-        result = zeros(AbstractFloat, jastrow.num_jpars)
-        for jpar in 1:jastrow.num_jpars
-            for i in 1:model_geometry.lattice.N
-                for j in 1:model_geometry.lattice.N
-                    if pht == true
-                        result[jpar] = -0.5 * (number_operator(i,pconfig)[1] + number_operator(i,pconfig)[2])*(number_operator(j,pconfig)[1] + number_operator(j,pconfig)[2])
-                    else
-                        result[jpar] = -0.5 * (number_operator(i,pconfig)[1] - number_operator(i,pconfig)[2])*(number_operator(k,pconfig)[1] - number_operator(j,pconfig)[2])
-                    end
-                end
-            end
-        end
-    elseif jastrow_type == "electron-phonon"
-        result = zeros(AbstractFloat, jastrow.num_jpars)
-        # TBA
-    else
-    end
-    return result
-end
+# ΔkΔp += derivative
 
+
+# # for the force vector...
+# # initial sum for a single element of f
+# ΔkE = 0.0
+
+# # stuff happens here...
+
+# ΔkE += derivative
 
 
 """
-    local_determinantal_derivative( A::Matrix{AbstractFloat}, W::Matrix{AbstractFloat}, acceptance::LocalAcceptance, 
-                                    model_geometry::ModelGeometry, parameters_to_optimize::Vector{AbstractString})
-
-Performs local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂αₖ, with respect
-to the kth variational parameter αₖ, in the determinantal part of the wavefunction.
-
-"""
-function local_determinantal_derivative(A, W, acceptance, model_geometry, parameters_to_optimize)
-    dims = model_geometry.unit_cell.n * model_geometry.lattice.N
-    num_vpars = length(parameters_to_optimize)
-    result = zeros(AbstractFloat, num_vpars)
-    iᵦ = acceptance.isite
-
-    # j = acceptance.fsite
-    
-    G = zeros(AbstractFloat, 2*dims, 2*dims)
-
-    for β in 1:Np
-        G[iᵦ,:] = W[:,β]
-    end
-
-    for vpar in 1:num_vpars
-        result[vpar] = sum(A[vpar] * G)
-    end
-
-    # # sum over number of particles
-    # for β in 1:Np
-    #     # sum over lattice sites for the up and down sectors
-    #     for j in 1:2*model_geometry.lattice.N
-    #         Δₖ += Ak[iᵦ,j]*W[j,β]
-    #     end
-    # end
-
-    return result
-end
-
-
-"""
-    get_SR_comatrix()
+    get_sr_comatrix()
 
 Generates the covariance matrix S, for Stochastic Reconfiguration
 
+The matrix S has elements S_kk' = <Δ_kΔk'> - <Δ_k><Δ_k'>
+
 """
-function get_SR_comatrix()
+function get_sr_comatrix()
+
+    # total number of variational parameters
+    num_detpars = determinantal_parameters.num_detpars
+    num_jpars = jastrow.num_jpars 
+    num_vpars = num_detpars + num_jpars 
+
+    # initialize covariance matrix
+    S = zeros(AbstractFloat, num_vpars, num_vpars)
+
+    # measure local parameters derivatives for this configuration
+    j_derivatives = measure_local_jpar_derivative(jastrow, pconfig)
+    d_derivatives = measure_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
+
+    # concatenate derivatives
+    derivatives = vcat(d_derivatives,j_derivatives)
+
+    for (i,j) in zip(num_vpars, num_vpars)
+        # populate SR matrix
+    end
+
+   
+    # the first num_detpars are determinantal parameters, the rest are Jastrow parameters
+    # the first num_detpars rows will be for the determinantal parameters, the rest will be for the Jastrow parameters
+        
+
+    
     # Δk = local_determinantal_derivative(A, W, acceptance, model_geometry, parameters_to_optimize)
     # Δk_Δkprime = local_determinantal_derivative(A, W, acceptance, model_geometry, parameters_to_optimize) * local_determinantal_derivative(A, W, acceptance, model_geometry, parameters_to_optimize)
 
-    S = Δk_Δkprime - Δk * transpose(Δk)
+    # S = Δk_Δkprime - Δk * transpose(Δk)
     
     return S
 end
 
 
 """
-    get_SR_forces()
+    get_sr_forces( determinantal_parameters::DeterminantalParameters)
 
 Generates the force vector f, for Stochastic Reconfiguration.
 
-"""
-function get_SR_forces()
-    Δk = local_determinantal_derivative(A, W, acceptance, model_geometry, parameters_to_optimize)
-    E = measure_local_energy(model_geometry, tight_binding_model, jastrow, particle_positions)
-    Δk_E = Δk * E
+The vector f has elements f_k = <Δ_k><H> - <Δ_kH>
 
-    f = Δk * E - Δk_E
+"""
+function get_sr_forces(determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A )
+
+    # particle positions
+    particle_positions = get_particle_positions(pconfig)
+
+    # total number of variational parameters
+    num_detpars = determinantal_parameters.num_detpars
+    num_jpars = jastrow.num_jpars 
+    num_vpars = num_detpars + num_jpars 
+    
+    # initialize force vector
+    f = zeros(AbstractFloat, num_vpars)
+
+    # measure local parameters derivatives for this configuration
+    j_derivatives = measure_local_jpar_derivative(jastrow, pconfig)
+    d_derivatives = measure_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
+
+    # concatenate derivatives
+    derivatives = vcat(d_derivatives,j_derivatives)
+
+    # measure local energy for this configuration
+    (E_loc, E_loc_kinetic, E_loc_hubb) = measure_local_energy(model_geometry, tight_binding_model, jastrow, particle_positions)
+
+    # for i in num_vpars
+
 
     return f
 end
@@ -136,12 +121,12 @@ end
 
 
 """
-    parameter_update!()
+    sr_update!()
 
 Update variational parameters.
 
 """
-function parameter_update!()
+function sr_update!()
     # get covariance matrix
     S = get_SR_matrix()
     # get force vector

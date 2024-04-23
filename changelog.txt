@@ -6,6 +6,7 @@ TODO: need to loop over number of vpars being optimized during local_update!()
 TODO: add test for parameter convergence
 TODO: update neighbor loop in measure_local_energy()
 TODO: change parameters to be optimized to a NamedTuple
+TODO: update get_SR_comatrix() and get_SR_forces(). To do this, may need to update method for derivatives and to get the local energy
 
 ------------------------------------------------------------------------------------------------------------------------------
 
@@ -40,7 +41,8 @@ Changed local_slater_derivative() to local_determinantal_derivative(), as it is 
 
 
 Change log (01/10):
-Created function prototypes related to SR/parameter updating including get_SR_matrix(), get_SR_forces(), parameter_gradient(), and parameter_update!() (StochasticReconfiguration.jl)
+Created function prototypes related to SR/parameter updating including get_SR_matrix(), get_SR_forces(), parameter_gradient(), 
+      and parameter_update!() (StochasticReconfiguration.jl)
 Fixed implementation get_Ak_matrices(), which also fixes the scaling issue (Hamiltonian.jl)
 Updated local_determinantal_derivative() and local_jastrow_derivative() methods (StochasticReconfiguration.jl)
 Created the Jastrow type (Jastrow.jl)
@@ -54,8 +56,35 @@ Changed get_SR_matrix() to get_SR_comatrix() (StochasticReconfiguration.jl)
 Change log (01/19):
 Updated do_particle_hop!() (VMC.jl)
 
-Changelog (01/24):
+Change log (01/24):
 Updated recalc_equal_greens() and added maximum allowed error in Green's function as a stabilization factor (Greens.jl and run_simulation.jl)
 Added recalc_Tvec() for numerical stabilization (Jastrow.jl)
 Updated measurment initialization (Measurments.jl)
 
+Change log (01/31):
+Updated methods for performing Green's function floating point error check (Greens.jl)
+Updated methods for performing T vector floating point error check (Greens.jl)
+Changed type VariationalParameter to DeterminantalParameters (Hamiltonian.jl)
+Changed instances of variational_parameters to determinantal_parameters, as the latter is more accurate. variational_parameters for here on will only be 
+      used to refer to determinantal_parameters+jastrow_parameters (Hamiltonian.jl, run_simulation.jl)
+Added num_detpars to definition of DeterminantalParameters (Hamiltonian.jl)
+Created method to find total number of variational_parameters get_num_vpars() (Utilities.jl)
+Updated get_SR_comatrix() and get_SR_forces() methods (StochasticReconfiguration.jl)
+
+
+Change log (02/12):
+Changed the name of functions get_SR_matrix(), get_SR_forces(), and parameter_update!() to get_sr_matrix(), get_sr_forces(), and sr_update!(), respectively (StochasticReconfiguration.jl)
+Updated definition of measure_local_energy() to properly loop over nearest neighbors of particle β (Measurements.jl
+Moved derivative measurements to Measurements.jl, as they make more sense there
+Changed local_determinantal_derivative() and local_jastrow_derivative() to measure_local_detpar_derivative() and measure_local_jpar_derivative(), respectively (Measurements.jl)
+
+
+Change log (02/26):
+Updated Jastrow type and add function map_jpars(), to more easily track Jastrow parameters (Jastrow.jl)
+
+
+Change log (04/23):
+Updated some function defintiions in Jastrow.jl
+Updated some measurement schemes in Measurements.jl
+Created src directory
+Created test directory

@@ -14,8 +14,8 @@ struct Jastrow
     jastrow_type::AbstractString
     # T vector
     Tvec::Vector{AbstractFloat}
-    # Jastrow parameter matrix
-    jpar_matrix::Matrix{AbstractFloat}
+    # Jastrow parameter dictionary
+    jpar_map::Dict{Any,Any}
     # number of Jastrow parameters
     num_jpars::Int
 end
@@ -51,27 +51,29 @@ end
 
 
 """
-    set_jpars!( dist_vec::Matrix{AbstractFloat}) 
+    set_jpars( dist_vec::Matrix{AbstractFloat}) 
 
 Sets entries in the distance matrix to some initial Jastrow parameter value and 
 sets parameters corresponding to the largest distance to 0.
 
 """
-function set_jpars!(dist_matrix) 
+function set_jpars(dist_matrix) 
+    jpar_matrix = copy(dist_matrix)
+
     r_max = maximum(dist_matrix)
     for i in 1:model_geometry.lattice.N
         for j in 1:model_geometry.lattice.N
-            if dist_matrix[i,j] == r_max
-                dist_matrix[i,j] = 0
+            if jpar_matrix[i,j] == r_max
+                jpar_matrix[i,j] = 0
             elseif i == j
-                dist_matrix[i,j] == 0  
+                jpar_matrix[i,j] == 0  
             else
-                dist_matrix[i,j] = 0.5
+                jpar_matrix[i,j] = 0.5
             end
         end
     end
 
-    return dist_matrix
+    return jpar_matrix
 end
 
 
@@ -84,6 +86,35 @@ Returns the number of Jastrow parameters.
 function get_num_jpars(jpar_matrix)
     return count(i->(i > 0),(jpar_matrix[tril!(trues(size(jpar_matrix)), -1)]))
 end
+
+
+"""
+    map_jpars( jpar_matrix::Matrix{AbstractFloat}, dist_matrix::Matrix{AbstractFloat} ) 
+
+Creates a dictionary of Jastrow parameters vᵢⱼ, and their distances rᵢⱼ
+
+"""
+function map_jpars(dist_matrix, jpar_matrix)
+    upper_triangular_dist = UpperTriangular(dist_matrix)
+    upper_triangular_jpars = UpperTriangular(jpar_matrix)
+    nrows, ncols = size(dist_matrix)
+    
+    jpar_dict = Dict()
+    
+    for i in 1:nrows
+        for j in i:ncols
+            distance = upper_triangular_dist[i,j]
+            jpar = upper_triangular_jpars[i, j]
+            indices = (i, j)
+            jpar_dict[indices] = (distance, jpar)
+        end
+    end
+
+    jpar_dist_dict = Dict(key => value for (key, value) in jpar_dict if value[2] != 0.0)
+    
+    return jpar_dist_dict
+end
+
 
 
 """
@@ -123,9 +154,14 @@ end
 Updates elements Tᵢ of the vector T after a Metropolis update.
 
 """
-function update_Tvec!(l, k, Tvec)
-    for i in 1:L
-        Tvec[i] += (jpar_matrix[i,l] - jpar_matrix[i,k]) 
+function update_Tvec!(local_acceptance, jastrow, model_geometry)
+    N = model_geometry.lattice.N
+
+    l = local_acceptance.isite
+    k = local_acceptance.fsite
+
+    for i in 1:N
+        jastrow.Tvec[i] += jastrow.jpar_map[(i,l)] - jastrow.jpar_map[(i,k)] 
     end
 
     return Tvec
@@ -140,8 +176,14 @@ which differ by a single particle hopping from site 'l' (configuration 'x₁') t
 using the corresponding T vectors Tₗ and Tₖ, rsepctively.  
 
 """
-function get_jastrow_ratio(l, k, Tₗ, Tₖ)
-    jas_ratio = exp(-(Tₗ - Tₖ) + jpar_matrix[l,l] - jpar_matrix[l,k])
+function get_jastrow_ratio(local_acceptance, jastrow)
+    l = local_acceptance.isite
+    k = local_acceptance.fsite
+
+    Tₗ = jastrow.Tvec[l]
+    Tₖ = jastrow.Tvec[k]
+
+    jas_ratio = exp(-(Tₗ - Tₖ) + 0.0 - jastrow.jpar_map[(l,k)]) #0.0 ≡ jastrow.jpar_map[(l,l)], replace this if this doesn't work
 
     return jas_ratio
 end
@@ -155,9 +197,11 @@ number of Jastrow parameters.
 
 """
 function build_jastrow_factor(jastrow_type)
-    jpar_matrix = get_distances()
-    set_jpars!(jpar_matrix)
+    dist_matrix = get_distances()
+    jpar_matrix = set_jpars(dist_matrix)
     num_jpars = get_num_jpars(jpar_matrix)
+    jpar_map = map_jpars(dist_matrix, jpar_matrix)
+
     # report the number of Jastrow parameters
     if verbose == true
         println(num_jpars," Jastrow parameters initialized")
@@ -165,7 +209,7 @@ function build_jastrow_factor(jastrow_type)
     end
     init_Tvec = get_Tvec(jpar_matrix,jastrow_type)
 
-    return Jastrow(jastrow_type, init_Tvec, jpar_matrix, num_jpars)
+    return Jastrow(jastrow_type, init_Tvec, jpar_map, num_jpars)
 end
 
 
@@ -176,9 +220,20 @@ Checks floating point error accumulation in the T vector and if ΔT < δT,
 then the recalculated T vector Tᵣ replaces the updated T vector Tᵤ.
 
 """
-function recalc_Tvec(Tᵤ, δT)
+function recalc_Tvec(Tᵤ, δT, model_geometry)
+    N = model_geometry.lattice.N
     Tᵣ = get_Tvec(jpar_matrix, jastrow_type)
-    # ΔT = sqrt(sum( (Tᵤ-Tᵣ)^2 )/sum(Tᵣ))     
+    diff = Tᵤ-Tᵣ
+    diff_sum = 0.0
+    T_sum = 0.0
+
+    for i in 1:2*N
+        diff_sum += sum(diff[i])
+        T_sum += sum(Tᵣ[i])
+    end
+
+    ΔT = sqrt(diff_sum^2/T_sum)     
+
     if ΔT > δT
         if verbose == true
             println("WARNING! T vector has been recalculated: ΔT = ", ΔT, " > δT = ", δT)

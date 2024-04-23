@@ -3,82 +3,116 @@ using LinearAlgebra
 using Test
 
 
-function initialize_measurement_container(model_geometry)
-    lattice = model_geometry.lattice
-    unit_cell = model_geometry.unit_cell
-
-    # number of orbitals per unit cell
-    n_orbitals = unit_cell.n
-
-    # extent of the lattice in each direction
-    L = lattice.L
-
-    # initialize global measurements
-    global_measurements = Dict{String, AbstractFloat}(
-        "density" => zero(AbstractFloat),       # average total density ⟨n⟩
-        "double_occ" => zero(AbstractFloat),    # double occupancy   
-        "energy" => zero(AbstractFloat),        # global energy
-        "sgn" => zero(AbstractFloat)            # fermion sign
-    )
-
-    # initialize local measurement
-    local_measurements = Dict{String, Vector{AbstractFloat}}(
-        "density" => zeros(AsbtractFloat, norbitals),       # average density for each orbital species
-        "double_occ" => zeros(AbstractFloat, norbitals)     # average double occupancy for each orbital
-    )
-
-    # initialize measurement container
-    measurement_container = (
-        global_measurements         = global_measurements,
-        local_measurements          = local_measurements,
-        equaltime_correlations      = equaltime_correlations,
-        L                           = L,
-    )
-
-    return measurement_container
-end
-
-
-function initialize_measurements!(measurement_container::NamedTuple,
-    tight_binding_model::TightBindingModel{T,E}) where {T<:Number, E<:AbstractFloat}
-
-(; local_measurements, global_measurements) = measurement_container
-
-# number of orbitals per unit cell
-norbital = length(tight_binding_model.ϵ_mean)
-
-# number of types of hoppings
-nhopping = length(tight_binding_model.t_bond_ids)
-
-# initialize chemical potential as global measurement
-global_measurements["chemical_potential"] = zero(Complex{E})
-
-# initialize on-site energy measurement
-local_measurements["onsite_energy"] = zeros(Complex{E}, norbital)
-
-# initialize hopping energy measurement
-if nhopping > 0
-local_measurements["hopping_energy"] = zeros(Complex{E}, nhopping)
-end
-
-return nothing
-end
-
-
 
 """
-    initialize_correlation_measurments!(model_geometry::ModelGeometry, model::AbstractString )
+    measure_local_jpar_derivative( jastrow::Jastrow, pconfig::Vector{Int} )
 
-Initialize either density correlation or spin correlation measurements.
+Performs local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂vₗₘ, with respect to the kth Jastrow parameter vₗₘ. Returns 
+a vector of derivatives.
 
 """
-function initialize_correlation_measurements!(model_geometry, correlation_type)
-    if correlation_type == "density"
+function measure_local_jpar_derivative(jastrow, pconfig)
 
-    elseif correlation_type == "spin"
+    # number of Jastrow parameters
+    num_jpars = jastrow.num_jpars
 
+    # map of Jastrow parameters
+    jpar_map = jastrow.jpar_map
+
+    # vector to store derivatives
+    derivatives = zeros(AbstractFloat, num_jpars)
+                
+    # for density Jastrow
+    if jastrow.jastrow_type == "density"
+        for num in 1:jastrow.num_jpars
+            for (i, r1) in jpar_map
+                for (j, r2) in jpar_map
+                    if r1[1] == r2[1]
+                        if pht == true
+                            derivatives[num] += -(number_operator(j[1],pconfig)[1] - number_operator(j[1],pconfig)[2]) * (
+                                                  number_operator(j[2],pconfig)[1] - number_operator(j[2],pconfig)[2])
+                        elseif pht == false
+                            derivatives[num] += -(number_operator(j[1],pconfig)[1] + number_operator(j[1],pconfig)[2]) * (
+                                                  number_operator(j[2],pconfig)[1] + number_operator(j[2],pconfig)[2])
+                        else
+                        end
+                    else
+                    end
+                end
+            end
+        end
+
+        return derivatives
+
+    # for spin Jastrow
+    elseif jastrow.jastrow_type == "spin"   
+        for num in 1:jastrow.num_jpars
+            for (i, r1) in jpar_map
+                for (j, r2) in jpar_map
+                    if r1[1] == r2[1]
+                        if pht == true
+                            derivatives[num] += -(number_operator(j[1],pconfig)[1] - number_operator(j[1], pconfig)[2]) * (
+                                                  number_operator(j[2], pconfig)[1] - number_operator(j[2], pconfig)[2])
+                        elseif pht == false
+                            derivatives[num] += -(number_operator(j[1],pconfig)[1] + number_operator(j[1], pconfig)[2]) * (
+                                                  number_operator(j[2], pconfig)[1] + number_operator(j[2], pconfig)[2])
+                        else
+                        end
+                    end
+                end
+            end
+        end
+
+        return derivatives
+
+    # for electron-phonon Jastrow
+    elseif jastrow.jastrow_type == "electron-phonon"   
+        return derivatives
     else
     end
+end
+
+
+"""
+    measure_local_detpar_derivative( determinantal_parameters::DeterminantalParameters, model_geometry::ModelGeometry
+                                     pconfig::Vector{Int}, W::Matrix{AbstractFloat}, A::Matrix{AbstractFloat}  )
+
+Performs local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂αₖ, with respect to the kth variational parameter αₖ,
+in the determinantal part of the wavefunction. Returns a vector of derivatives.
+
+"""
+function measure_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)  
+
+    # dimensions
+    dims = model_geometry.unit_cell.n * model_geometry.lattice.N
+
+    # number of determinantal parameters
+    num_detpars = determinantal_parameters.num_detpars
+    
+    # particle positions
+    particle_positions = get_particle_positions(pconfig)
+
+    # vector to store derivatives
+    derivatives = zeros(AbstractFloat, num_detpars)
+    
+
+    # loop over Nₚ particles # TBA: need to fix method
+    G = zeros(AbstractFloat, 2*dims, 2*dims)
+    for β in 1:Np
+        for j in 1:2*dims
+            for (spindex, iᵦ) in particle_positions
+                G[iᵦ,j] = W[j,β]
+            # G[iᵦ,:] = W[:,β]
+            end
+        end
+    end
+
+    # loop over the number of determinantal parameters
+    for num in 1:num_detpars
+        derivatives[num] += sum(A[num] * G)
+    end
+
+    return derivatives
 end
 
 
@@ -92,7 +126,7 @@ function measure_double_occ(pconfig, model_geometry)
     nup_ndn = 0.0
 
     for i in 1:model_geometry.lattice.N
-        nup_ndn += number_operator(i,pconfig)[1]*(1-number_operator(i,pconfig)[2])
+        nup_ndn += number_operator(i, pconfig)[1] * (1 - number_operator(i, pconfig)[2])
     end
     
     return nup_ndn / model_geometry.lattice.N
@@ -108,7 +142,7 @@ Measure the local particle density ⟨n⟩.
 
 """
 function measure_n(site)
-    loc_den = number_operator(site,pconfig)[1] + 1 - number_operator(i,pconfig)[2]
+    loc_den = number_operator(site, pconfig)[1] + 1 - number_operator(i, pconfig)[2]
 
     return loc_den
 end
@@ -148,18 +182,22 @@ local kinetic energy, and local Hubbard energy.
 
 """
 function measure_local_energy(model_geometry, tight_binding_model, jastrow, particle_positions)
+
+    # generate neighbor table
     nbr_table = build_neighbor_table(bonds[1],
                                     model_geometry.unit_cell,
                                     model_geometry.lattice)
-    E_loc_kinetic = 0.0
+
+    # gnerate neighbor map
+    nbr_map = map_neighbor_table(nbr_table)
 
     # loop over different electrons k
+    E_loc_kinetic = 0.0
     for β in 1:Np
-        k = particle_positions[β][2]
-        # TBA: loop over different neighbor orders (i.e. next nearest neighbors)
-        # loop over nearest neighbors
+        k = particle_positions[β][2] 
+        # loop over nearest neighbors. TBA: loop over different neighbor orders (i.e. nearest and next nearest neighbors)
         sum_nn = 0.0
-        for (i,j) in eachcol(nbr_table) # TBA: only loop over the known neighbors of β, l
+        for l in nbr_map[k][2]
             # reverse sign if system is particle-hole transformed
             if pht == true
                 Tₗ = jastrow.Tvec[l]
@@ -172,6 +210,7 @@ function measure_local_energy(model_geometry, tight_binding_model, jastrow, part
             end
             sum_nn += Rⱼ * W[l, β]
         end
+
         # reverse sign if system is particle-hole transformed
         if pht == true
             E_loc_kinetic += tight_binding_model.t[1] * sum_nn          
@@ -181,9 +220,9 @@ function measure_local_energy(model_geometry, tight_binding_model, jastrow, part
     end
 
     # calculate Hubbard energy
-    E_loc_hubb = U * number_operator(site,pconfig)[1] *(1 - number_operator(i,pconfig)[2])
+    E_loc_hubb = U * number_operator(site, pconfig)[1] * (1 - number_operator(i, pconfig)[2])
 
-    # resultant local energy
+    # calculate total local energy
     E_loc = E_loc_kinetic + E_loc_hubb
 
     return E_loc, E_loc_kinetic, E_loc_hubb

@@ -6,7 +6,7 @@ using Test
 
 # export ModelGeometry
 # export TightBindingModel
-# export initialize_variational_parameters
+# export initialize_determinantal_parameters
 # export build_mean_field_hamiltonian
 # export build_slater_determinant
 # export get_Ak_matrices
@@ -42,44 +42,47 @@ end
 
 
 """
-    VariationalParameters( pars::Vector{AbstractString}, 
-                        vals::Vector{AbstractFloat}, opts::Vector{Bool} )
+    DeterminantalParameters( pars::Vector{AbstractString}, 
+                        vals::Vector{AbstractFloat}, num_detpars::Int )
 
 A type defining a set of variational parameters.
 
 """
-struct VariationalParameters
+struct DeterminantalParameters
     # name of order parameter
     pars::Vector{AbstractString}
     # variational parameter values
     vals::Vector{AbstractFloat}
+    # number of determinantal parameters
+    num_detpars::Int
 end
 
 
 """
-    initialize_variational_parameters(pars:;, vals:: ) 
+    initialize_determinantal_parameters(pars:;Vector{AbstractString}, vals::Vector{AbstractFloat} ) 
 
 Constructor for the variational parameters type.
 
 """
-function initialize_variational_parameters(pars, vals)
+function initialize_determinantal_parameters(pars, vals)
     @assert length(pars) == length(vals) "Input vectors must have the same length"
+    num_detpars = length(pars)
 
-    return VariationalParameters(pars, vals)
+    return DeterminantalParameters(pars, vals, num_detpars)
 end
 
 
 """
-    map_variational_parameters( variational_parameters::VariationalParamters ) 
+    map_determinantal_parameters( determinantal_parameters::DeterminantalParameters ) 
 
 For a given set of variational parameters, returns a dictionary of 
 that reports the value and optimization flag for a given parameter.
 
 """
-function map_variational_parameters(variational_parameters)
+function map_determinantal_parameters(determinantal_parameters)
     vparam_map = Dict()
-    for i in 1:length(variational_parameters.vals)
-       vparam_map[variational_parameters.pars[i]] = variational_parameters.vals[i]
+    for i in 1:length(determinantal_parameters.vals)
+       vparam_map[determinantal_parameters.pars[i]] = determinantal_parameters.vals[i]
     end
     return vparam_map
 end
@@ -296,16 +299,16 @@ end
 
 
 """
-    build_variational_terms( variational_parameters::VariationalParameters ) 
+    build_variational_terms( determinantal_parameters::DeterminantalParameters ) 
 
 Constructs a 2⋅n⋅N by 2⋅n⋅N matrices to be added to the non-interacting tight binding
 Hamiltonian for each variational parameter. Returns a vector of the sum of
 matrices and a vector of individual matrix terms.
 
 """
-function build_variational_terms(variational_parameters)
+function build_variational_terms(determinantal_parameters)
     dims = model_geometry.unit_cell.n*model_geometry.lattice.N
-    vparam_map = map_variational_parameters(variational_parameters) 
+    vparam_map = map_determinantal_parameters(determinantal_parameters) 
     Hs = zeros(AbstractFloat, 2*dims, 2*dims)
     Hd = zeros(AbstractFloat, 2*dims, 2*dims)    
     Ha = zeros(AbstractFloat, 2*dims, 2*dims)    
@@ -445,7 +448,7 @@ matrix of variational terms.
 
 """
 function build_mean_field_hamiltonian()
-    return build_tight_binding_model(tight_binding_model) + build_variational_terms(variational_parameters)[1], build_variational_terms(variational_parameters)[2]
+    return build_tight_binding_model(tight_binding_model) + build_variational_terms(determinantal_parameters)[1], build_variational_terms(determinantal_parameters)[2]
 end
 
 

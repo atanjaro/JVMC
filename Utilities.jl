@@ -59,6 +59,39 @@ function is_openshell(ε, Np)
 end
 
 
+"""
+    get_num_vpars(determinantal_parameters::DeterminantalParameters, 
+    density_jastrow::Jastrow, spin_jastrow::Jastrow, eph_jastrow::Jastrow) 
+
+Returns the total number of variational parameters.
+
+"""
+function get_num_vpars()
+    num_jpars = 0
+
+    num_detpars = determinantal_parameters.num_detpars
+
+    # check if density Jastrow is defined
+    if isdefined(Main, :density_jastrow)
+        num_jpars += density_jastrow.num_jpars
+    end
+
+    # check if spin Jastrow is defined
+    if isdefined(Main, :spin_jastrow)
+        num_jpars += spin_jastrow.num_jpars
+    end
+
+    # check if e-ph Jastrow is defined
+    if isdefined(Main, :eph_jastrow)
+        num_jpars += eph_jastrow.num_jpars
+    end
+
+    num_vpars = num_detpars + num_jpars
+
+    return num_vpars, num_detpars, num_jpars
+
+end
+
 # end # of module
 
 

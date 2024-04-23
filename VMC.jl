@@ -30,7 +30,7 @@ Constructor for the local acceptance type.
 
 """
 function local_acceptance()
-   acceptance, particle, spin, isite, fsite =  propose_random_hop(particle_positions)
+   acceptance, particle, spin, isite, fsite =  metropolis(particle_positions)
 
    return LocalAcceptance(acceptance, particle, spin, isite, fsite)
 end
@@ -147,6 +147,7 @@ function do_particle_hop!(proposed_hop, pconfig)
         return pconfig
     else
         return pconfig
+    end
 end
 
 
