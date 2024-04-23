@@ -83,8 +83,12 @@ Change log (02/26):
 Updated Jastrow type and add function map_jpars(), to more easily track Jastrow parameters (Jastrow.jl)
 
 
-Change log (04/23):
+Change log (04/22):
 Updated some function defintiions in Jastrow.jl
 Updated some measurement schemes in Measurements.jl
 Created src directory
 Created test directory
+
+Change log (04/23):
+Begin adding unit tests for each module
+Fixed bug in get_particle_numbers() where ndn was being calculated incorrectly

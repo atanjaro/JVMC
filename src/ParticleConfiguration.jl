@@ -15,7 +15,7 @@ function get_particle_numbers(density)
     if pht == true
         # number of up, down electrons
         nup  = Ne / 2
-        ndn = model_geometry.lattice.N - nup
+        ndn = Ne - nup
         # total number of particles (electrons and holes)
         Np = nup + model_geometry.lattice.N - ndn
     else

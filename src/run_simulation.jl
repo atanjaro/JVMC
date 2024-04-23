@@ -1,7 +1,6 @@
 using LatticeUtilities
 using Random
 using LinearAlgebra
-using Test
 using DelimitedFiles
 using BenchmarkTools
 using Profile
