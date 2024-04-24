@@ -1,7 +1,100 @@
 using LatticeUtilities
 using LinearAlgebra
-using Test
 
+"""
+initialize_measurement_container(model_geometry::ModelGeometry)
+
+Creates generic arrays for storage of associated measurment quantities. 
+
+"""
+function initialize_measurement_container(model_geometry, N_burnin, N_updates)
+
+    unit_cell = model_geometry.unit_cell
+    lattice = model_geometry.lattice
+
+    L = lattice.L
+    N = lattice.N
+    norbs = unit_cell.n
+    N_iterations = N_burnin + N_updates
+
+    scalar_measurements = Dict{String, Any}([("density",zeros(AbstractFloat, norbs)),        # average density per orbital species
+                                ("double_occ",zeros(AbstractFloat, norbs)),                  # average double occupancy per orbital species
+                                ])                                                           # TODO: add fields for variational parameters 
+
+    correlation_measurements = Dict()
+
+    measurement_container = (
+            scalar_measurements       = scalar_measurements,          
+            correlation_measurements  = correlation_measurements,                          
+            L                         = L,
+            N                         = N,
+            norbs                     = norbs,
+            N_iterations              = N_iterations                           
+    )
+
+    return measurement_container
+end
+
+
+
+"""
+initialize_measurements!()
+
+For a certain type of measurment (scalar or correlation), initializes the arrays
+necessary to store measurements in respective bins.
+
+"""
+function initialize_measurements!(measurement_container, observable)
+    (; scalar_measurements,N,norbs) = measurement_container
+
+    local_measurements = 0.0 
+    global_measurements = []
+
+    if observable == "energy"
+        # For energy, store tuple (zeros(AbstractFloat, norbs), local_measurements, global_measurements)
+        scalar_measurements["global_energy"] = (zeros(AbstractFloat, norbs),local_measurements,global_measurements)
+        # scalar_measurements["global_energy"] = local_measurements, global_measurements
+    elseif observable == "stripe"
+        # For stripe, store tuple (zeros(AbstractFloat, norbs*N), local_measurements, global_measurements)
+        scalar_measurements["site_dependent_density"] = (zeros(AbstractFloat, norbs*N),local_measurements,global_measurements)
+        scalar_measurements["site_dependent_spin"] = (zeros(AbstractFloat, norbs*N),local_measurements,global_measurements)
+    elseif observable == "phonon_number"
+        # For phonon number
+    elseif observable == "displacement"
+        # For displacement
+    end
+
+    return nothing
+end
+
+
+# TODO: implement correlation measurmenets
+function initialize_correlation_measurements!(measurement_container,  correlation)
+    # type of measurements
+    #   - density-density correlation 
+    #   - spin-spin correlation
+    #   - pair correlation
+
+    (; correlation_measurements) = measurement_container
+
+    if correlation == "density"
+        # scalar_measurements["density-density correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,global_measurements = [])
+    elseif correlation == "spin"
+        # scalar_measurements["spin-spin correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,global_measurements = [])
+    elseif correlation == "pair"
+        # scalar_measurements["pair correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,global_measurements = [])
+    end
+
+    return nothing
+end
+
+# accumulator for measurments
+    # # through the course of the simulation, we estimate the expectation value of observable O using ⟨O⟩ ≈ N⁻¹ ∑ₓ Oₗ(x)
+    # by 'local' here, I mean the argument of the sums used to obtain the expectation value
+    # local_measurements = 0.0         # Oₗ(x). This is added to during the course of the simulation: local_val += measured
+    # iterations = 0.0        # N. This is incremented during the simulation, up to N_burnin + N_updates: iterations +=1
+    # by 'global' here, I mean the sum of local measurements to obtain the expectation value
+    # global_measurements = []   # record the expectation value for each iteration: push!(total_local_vals, local_val/iterations)
 
 
 """
@@ -96,7 +189,7 @@ function measure_local_detpar_derivative(determinantal_parameters, model_geometr
     derivatives = zeros(AbstractFloat, num_detpars)
     
 
-    # loop over Nₚ particles # TBA: need to fix method
+    # loop over Nₚ particles 
     G = zeros(AbstractFloat, 2*dims, 2*dims)
     for β in 1:Np
         for j in 1:2*dims
@@ -200,13 +293,9 @@ function measure_local_energy(model_geometry, tight_binding_model, jastrow, part
         for l in nbr_map[k][2]
             # reverse sign if system is particle-hole transformed
             if pht == true
-                Tₗ = jastrow.Tvec[l]
-                Tₖ = jastrow.Tvec[k]
-                Rⱼ = exp(-get_jastrow_ratio(l, k, Tₗ, Tₖ))
+                Rⱼ = exp(-get_jastrow_ratio(l, k, jastrow))
             else
-                Tₗ = jastrow.Tvec[l]
-                Tₖ = jastrow.Tvec[k]
-                Rⱼ = exp(get_jastrow_ratio(l, k, Tₗ, Tₖ))
+                Rⱼ = exp(get_jastrow_ratio(l, k, jastrow))
             end
             sum_nn += Rⱼ * W[l, β]
         end
@@ -225,7 +314,7 @@ function measure_local_energy(model_geometry, tight_binding_model, jastrow, part
     # calculate total local energy
     E_loc = E_loc_kinetic + E_loc_hubb
 
-    return E_loc, E_loc_kinetic, E_loc_hubb
+    return E_loc
 end
 
 

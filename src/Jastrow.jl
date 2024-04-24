@@ -164,7 +164,7 @@ function update_Tvec!(local_acceptance, jastrow, model_geometry)
         jastrow.Tvec[i] += jastrow.jpar_map[(i,l)] - jastrow.jpar_map[(i,k)] 
     end
 
-    return Tvec
+    return nothing
 end
 
 
@@ -176,10 +176,7 @@ which differ by a single particle hopping from site 'l' (configuration 'x₁') t
 using the corresponding T vectors Tₗ and Tₖ, rsepctively.  
 
 """
-function get_jastrow_ratio(local_acceptance, jastrow)
-    l = local_acceptance.isite
-    k = local_acceptance.fsite
-
+function get_jastrow_ratio(l, k, jastrow)
     Tₗ = jastrow.Tvec[l]
     Tₖ = jastrow.Tvec[k]
 
@@ -220,7 +217,8 @@ Checks floating point error accumulation in the T vector and if ΔT < δT,
 then the recalculated T vector Tᵣ replaces the updated T vector Tᵤ.
 
 """
-function recalc_Tvec(Tᵤ, δT, model_geometry)
+#TODO: need to update method
+function recalc_Tvec(jastrow, δT, model_geometry)
     N = model_geometry.lattice.N
     Tᵣ = get_Tvec(jpar_matrix, jastrow_type)
     diff = Tᵤ-Tᵣ

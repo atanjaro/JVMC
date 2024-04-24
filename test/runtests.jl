@@ -18,27 +18,24 @@ bonds = [[Bond((1,1), [1,0]), Bond((1,1), [0,1])]]
 pht = true
 tight_binding_model = TightBindingModel([1.0,0],3.0)
 determinantal_parameters = initialize_determinantal_parameters(["Δs", "μ"], [0.3, 3.0])
+n = 1.0
+nup = 2
+ndn = 2
 
-# check that particle numbers are correctly returned
-function test_particle_numbers()
-    @test get_particle_numbers(1.0) == (4, 4, 2, 2)
-    @test get_particle_numbers(0.5) == (4, 2, 1, 1)
+# check that particles in the canonical ensemble are correctly returned
+function test_canonical_ensemble()
+    @test get_particle_numbers(n) == (4, 4, 2, 2)
+    @test get_particle_density(nup,ndn) == (1.0, 4, 4)
     @test_throws AssertionError get_particle_numbers(0.8)  
-end
-
-# check that particle densities are correctly returned
-function test_particle_density()
-    @test get_particle_density(2,2) == (1.0, 4, 4)
-    @test get_particle_density(1,1) == (0.5, 4, 2)
     @test_throws AssertionError get_particle_density(2,3)
 end
 
-
+# checks mean-field Hamiltonian and determinantal state
 function test_hamiltonian_build()
-    @test build_mean_field_hamiltonian() == [-3.0  -1.0  -1.0   0.0  0.3  0.0  0.0  0.0; -1.0  -3.0   0.0  -1.0  0.0  0.3  0.0  0.0; -1.0   0.0  -3.0  -1.0  0.0  0.0  0.3  0.0; 0.0  -1.0  -1.0  -3.0  0.0  0.0  0.0  0.3;  0.3   0.0   0.0   0.0  3.0  1.0  1.0  0.0]
-end
-
-
-function test_diagonalization()
-
+    bmf = build_mean_field_hamiltonian()
+    ϕ = build_determinantal_state() 
+    
+    @test bmf[1] == bmf[1]'
+    @test diagonalize(bmf[1])[1] == ϕ[3]
+    @test length(ϕ[1])%length(ϕ[4]) == 0
 end

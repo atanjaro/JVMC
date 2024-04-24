@@ -48,9 +48,9 @@ U = 0.5
 # fugacity
 # μₚₕ = 0.0
 
-# TODO: read in initial variational parameter set
-# readin_vpars = false
-# path_to_vpars = /path/to/variational/parameters/
+# read in initial variational parameter set
+readin_vpars = false
+path_to_vpars = "/path/to/variational/parameters/"
 
 ######################################
 ##      VARIATIONAL PARAMTERS       ##
@@ -58,11 +58,11 @@ U = 0.5
 # μ: chemical potential
 # μₚₕ: fugacity
 # Δs: s-wave pairing
-# Δd: d-wave pairing 
+# Δd: d-wave pairing (TBA)
 # Δa: antiferromagnetic (Neél) order
 # Δc: uniform charge order
-# Δcs: charge stripe
-# Δss: spin stripe
+# Δcs: charge stripe (TBA)
+# Δss: spin stripe  (TBA)
 
 # Δd + Δa: uniform d-wave
 # Δcm + Δsm: stripe order
@@ -130,11 +130,14 @@ additional_info = Dict(
     "N_updates" => N_updates,
     "N_bins" => N_bins,
     "bin_size" => bin_size,
-    "local_acceptance_rate" => 0.0,
+    "fermionic_local_acceptance_rate" => 0.0,
     "initial_dt" => dt,
     "final_dt" => 0.0,
     "seed" => seed,
-    "n_bar" => n̄
+    "n_bar" => n̄,
+    "global_energy" => 0.0,
+    "μ_BCS" => 0.0,
+    "Δs" => 0.0
 )
 
 ##################
@@ -148,18 +151,18 @@ unit_cell = UnitCell([[1.0,0.0], [0.0,1.0]],           # lattice vectors
 # build square lattice
 lattice = Lattice([Lx,Ly],[true,true])
 
-# define model geometry
-model_geometry = ModelGeometry(unit_cell,lattice)
-
 # define nearest neighbor bonds
 bond_x = Bond((1,1), [1,0])
 bond_y = Bond((1,1), [0,1])
 # define next nearest neighbor bonds
 bond_xy = Bond((1,1), [1,1])
-bond_yx = Bond((1,1), [1,-1])
+bond_yx = Bond((1,1), [1,-1])[4]
 
 # vector of 2D bonds
 bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
+
+# define model geometry
+model_geometry = ModelGeometry(unit_cell,lattice, bonds)
 
 # define non-interacting tight binding model
 tight_binding_model = TightBindingModel([t,tp],μ)
@@ -206,61 +209,87 @@ spin_jastrow = build_jastrow_factor("spin")
 ## INITIALIZE MEASUREMENTS ##
 #############################
 
-# Initialize standard tight binding model VMC measurements
-initialize_measurements!(model_geometry, "tight binding")
+# initialize measurement container for VMC measurements
+measurement_container = initialize_measurement_container(model_geometry, N_burnin, N_updates)
 
-# Initialze measurements related to the Hubbard model
-initialize_measurements!(model_geometry, "hubbard")
+# initialize energy measurements
+initialize_measurements!(measurement_container, "energy")
 
-# Initialze measurements related to electron-phonon models
-# initialize_measurements!(model_geometry, "electron-phonon")
-
-# Initialize density correlation measurements
-initialize_correlation_measurements!(model_geometry, "density")
-
-# Initialize spin correlation measurements
-initialize_correlation_measurements!(model_geometry, "spin")
+# initialize correlation measurements
+# initialize_correlation_measurements!(measurement_container, "density")
 
 
-###################################
-## BURNIN/THERMALIZATION UPDATES ##
-###################################
+###########################################
+## PERFORM BURNIN/THERMALIZATION UPDATES ##
+###########################################
+
+# start time for simulation
+t_start = time()
 
 # Iterate over burnin/thermalization updates.
 for n in 1:N_burnin
-    # perform local updates to electron dofs
-    # electron_local_update!()
+    # perform local updates to fermionic dofs
+    (acceptance_rate, pconfig, jastrow, W, vpars) = local_fermion_update!(model_geometry, tight_binding_model, jastrow, pconfig)        # TODO: this function is nearly done, just need to add SR updates
 
-    # record acceptance rate
+    additional_info["fermionic_local_acceptance_rate"] += acceptance_rate
 
     # perform local updates to phonon dofs
-    # phonon_local_updates
+    # local_phonon_update!(model_geometry, electron_phonon_model, jastrow, phconfig)
 
-    # record acceptance rate
+    additional_info["phononic_local_acceptance_rate"] += acceptance_rate
 end
 
 # recompute W and Tvec(s) for numerical stabilization
+(W, ΔW) = recalc_equal_greens(Wᵤ, δW, model_geometry)
+# recalc_Tvec(Tᵤ, δT, model_geometry)       # TODO: need to update recalc_Tvec() method
+
+
+##################################################################
+## PERFORM SIMULATION/MEASUREMENT UPDATES AND MAKE MEASUREMENTS ##
+##################################################################
 
 # Iterate over the number of bins, i.e. the number of measurements will be dumped to file.
 for bin in 1:N_bins
 
     # Iterate over the number of updates and measurements performed in the current bin.
     for n in 1:bin_size
-        # perform local updates to electron dofs
-        # electron_local_update!()
+        # perform local updates to fermionic dofs
+        (acceptance_rate, pconfig, jastrow, W, vpars) = local_fermion_update!(model_geometry, tight_binding_model, jastrow, pconfig)
 
-        # record acceptance rate
+        additional_info["fermionic_local_acceptance_rate"] += acceptance_rate
 
         # perform local updates to phonon dofs
-        # phonon_local_update!()
+        # local_phonon_update!(model_geometry, electron_phonon_model, jastrow, phconfig)
 
-        # record acceptance rate
+        additional_info["phononic_local_acceptance_rate"] += acceptance_rate
+
+        #TODO: add additional numerical stabilization?
     end
 
     # Write the average measurements for the current bin to file.
-    # write_measurements!()
+    write_measurements!(
+            measurement_container = measurement_container,
+            model_geometry = model_geometry,
+            bin = bin,
+            bin_size = bin_size
+    )
 end
 
+# end time for simulation
+t_end = time()
+
+# record simulation runtime
+additional_info["time"] += t_end - t_start
+
+# normalize acceptance rate measurements
+additional_info["fermionic_local_acceptance_rate"] /= (N_updates + N_burnin)
+# additional_info["phonon_acceptance_rate"] /= (N_updates + N_burnin)
+
+# write simulation information to file
+# save_simulation_info(simulation_info, additional_info)
+
+# process measurements
+# process_measurements(simulation_info.datafolder, 20)
 
 
 

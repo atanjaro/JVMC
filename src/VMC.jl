@@ -11,7 +11,7 @@ A type defining quantities related to local MC update acceptance
 """
 struct LocalAcceptance
     # whether move is possible
-    acceptance::Bool
+    acceptance::Int
     # selected particle to be moved
     particle::Int
     # the selected particle's spin
@@ -78,7 +78,7 @@ position.
 
 """
 
-function metropolis(particle_positions)
+function metropolis(particle_positions, rng)
     nbr_table = build_neighbor_table(bonds[1],
                                     model_geometry.unit_cell,
                                     model_geometry.lattice)
@@ -117,7 +117,7 @@ function metropolis(particle_positions)
 
             # do particle hop
             
-            return true, beta, beta_spin, k, l  # acceptance, particle number, particle spin, initial site, final site
+            return 1, beta, beta_spin, k, l  # acceptance, particle number, particle spin, initial site, final site
         else
             if verbose == false
                println("HOP REJECTED")
@@ -125,9 +125,6 @@ function metropolis(particle_positions)
         end
     end
 end
-
-
-
 
 """
     do_particle_hop!( local_acceptance::LocalAcceptance, pconfig::Matrix{Int})
@@ -144,48 +141,46 @@ function do_particle_hop!(proposed_hop, pconfig)
         pconfig[k] = 0
         pconfig[l] = 1
 
-        return pconfig
+        return nothing
     else
-        return pconfig
+        return nothing
     end
 end
 
 
 """
-    local_update!()
+    local_fermion_update!()
 
 Perform a local MC update. Proposes move and accept rejects via Metropolis algorithm,
 if accepted, updates particle positions, T vector, W matrix, and variational parameters.
 
 """
-function local_update!()
+function local_fermion_update!(model_geometry, tight_binding_model, jastrow, pconfig, rng)
+
+    particle_positions = get_particle_positions(pconfig)
 
     # accept/reject (Metropolis)
-    proposed_hop = metropolis(particle_positions)
+    proposed_hop = metropolis(particle_positions, rng)
 
     # perform hopping
-    pconfig = do_particle_hop!(proposed_hop, pconfig)
+    do_particle_hop!(proposed_hop, pconfig)
 
     # update particle positions
-    update_particle_position!(particle_positions, proposed_hop)
+    update_particle_position!(proposed_hop, particle_positions)
 
     # update T vector
-    T_vec = update_Tvec!(LocalAcceptance.fsite, LocalAcceptance.isite, Tvec)
-
-    # update Jastrow pseudopotentials
-     # need to account for number of parameters being optimized
-    # need to update value of parameter, as well as keep track of it's history over the N_updates
+    update_Tvec!(proposed_hop, jastrow, model_geometry)
 
     # update Green's function
-    W = update_equal_greens!(local_acceptance)
+    update_equal_greens!(proposed_hop)
 
     # update variational parameters
-    vpar = parameter_update!()
+    sr_update!()
     # need to account for number of parameters being optimized
     # need to update value of parameter, as well as keep track of it's history over the N_updates
     # perhaps store the histories in a num_vaprs by N_updates matrix?
-    
-    return acceptance_rate, W, Tvec, vpar
+
+    return acceptance_rate, pconfig, jastrow, W, vpars 
 end
 
 

@@ -23,6 +23,8 @@ struct ModelGeometry
     unit_cell::UnitCell
     # extent of the lattice
     lattice::Lattice
+    # lattice bonds
+    bond::Vector{Vector{Bond{2}}}
 end
 
 

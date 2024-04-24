@@ -194,14 +194,14 @@ end
 
 
 """
-    update_particle_position!( paritcle_positions, proposed_hop )
+    update_particle_position!(proposed_hop , paritcle_positions)
 
 If a particle 'β' at site 'k' successfully hops to a neighboring site 'l', update its
 position in 'particle_positions' as well as 'pconfig.
 
 """
 # TODO: need to update
-function update_particle_position!(particle_positions, proposed_hop)
+function update_particle_position!(proposed_hop, particle_positions)
     if proposed_hop.acceptance == true
         particle_positions[proposed_hop.particle][1] = get_spindices_from_index(proposed_hop.fsite)[proposed_hop.spin]
         particle_positions[proposed_hop.particle][2] = proposed_hop.fsite

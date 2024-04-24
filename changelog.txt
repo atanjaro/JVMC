@@ -92,3 +92,10 @@ Created test directory
 Change log (04/23):
 Begin adding unit tests for each module
 Fixed bug in get_particle_numbers() where ndn was being calculated incorrectly
+
+Change log (04/24):
+Added initialize_measurement_container() and initialize_measurements!() to Measurements.jl
+Updated definitions of measure_local_energy() and get_jastrow_ratio()
+Updated do_particle_hop!() into a mutating function
+Minor definitional update to update_particle_posistions!()
+Updated local_update!() to local_fermion_update!()
