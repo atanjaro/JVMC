@@ -70,7 +70,7 @@ end
 
 
 """
-    metropolis( particle_positions::Vector{Dict{Any,Any}})
+    metropolis( W, jastrow, particle_positions, rng )
 
 Perform accept/reject step of proposed hop using the Metropolis algorithm. If move is
 accepted, returns acceptance, particle β and it's spindex, initial position, and final
@@ -78,7 +78,7 @@ position.
 
 """
 
-function metropolis(particle_positions, rng)
+function metropolis(W, jastrow, particle_positions, rng) 
     nbr_table = build_neighbor_table(bonds[1],
                                     model_geometry.unit_cell,
                                     model_geometry.lattice)
@@ -103,10 +103,10 @@ function metropolis(particle_positions, rng)
         # begin Metropolis algorithm
 
         # get Jastrow ratio (element of T vector)
-        Rⱼ = T[k,l]        # TODO: use views to obtain element?
+        Rⱼ = get_jastrow_ratio(k, l, jastrow)    
 
         # get wavefunction ratio (correpsonding element of Green's function)
-        Rₛ = W[k,l]        # TODO: use views to obtain element?
+        Rₛ = W[k,l]        
 
         acceptance_prob = Rⱼ * Rⱼ * Rₛ * Rₛ     
 
@@ -125,6 +125,126 @@ function metropolis(particle_positions, rng)
         end
     end
 end
+
+
+"""
+    metropolis( W, jastrow1, jastrow2, particle_positions, rng )
+
+Perform accept/reject step of proposed hop using the Metropolis algorithm. If move is
+accepted, returns acceptance, particle β and it's spindex, initial position, and final
+position.
+
+"""
+
+function metropolis(W, jastrow1, jastrow2, particle_positions, rng) 
+    nbr_table = build_neighbor_table(bonds[1],
+                                    model_geometry.unit_cell,
+                                    model_geometry.lattice)
+    nbrs = map_neighbor_table(nbr_table)
+    beta = rand(rng, 1:trunc(Int,Np))                   # randomly select some particle in the lattice
+    k = particle_positions[beta][2]                # real position 'k' of particle 'β' 
+    l = rand(rng, 1:nbrs[k][2][2])                        # random neighboring site 'l'
+    beta_spin = get_spindex_type(particle_positions[beta][1])
+    
+    # checks occupation against spin species of particle 'β'
+    # if site is unoccupied by same spin species, hop is possible
+    if number_operator(l,pconfig)[beta_spin] == 1
+        if verbose == true
+            println("HOP NOT POSSIBLE!")  
+        end
+        return false 
+    else
+        if verbose == true
+            println("HOP POSSIBLE!")
+        end
+
+        # begin Metropolis algorithm
+
+        # get Jastrow ratios (element of T vector)
+        Rⱼ₁ = get_jastrow_ratio(k, l, jastrow1)    
+        Rⱼ₂ = get_jastrow_ratio(k,l, jastrow2)
+
+        # get wavefunction ratio (correpsonding element of Green's function)
+        Rₛ = W[k,l]        
+
+        acceptance_prob = Rⱼ₁ * Rⱼ₂ * Rⱼ * Rₛ * Rₛ     
+
+        if acceptance_prob > 1 || rand(rng,dist,1) < acceptance_prob
+            if verbose == true
+                println("HOP ACCEPTED!")
+            end
+
+            # do particle hop
+            
+            return 1, beta, beta_spin, k, l  # acceptance, particle number, particle spin, initial site, final site
+        else
+            if verbose == false
+               println("HOP REJECTED")
+            end
+        end
+    end
+end
+
+
+"""
+    metropolis( W, jastrow1, jastrow2, jastrow3, particle_positions, rng )
+
+Perform accept/reject step of proposed hop using the Metropolis algorithm. If move is
+accepted, returns acceptance, particle β and it's spindex, initial position, and final
+position.
+
+"""
+
+function metropolis(W, jastrow1, jastrow2, jastrow3, particle_positions, rng) 
+    nbr_table = build_neighbor_table(bonds[1],
+                                    model_geometry.unit_cell,
+                                    model_geometry.lattice)
+    nbrs = map_neighbor_table(nbr_table)
+    beta = rand(rng, 1:trunc(Int,Np))                   # randomly select some particle in the lattice
+    k = particle_positions[beta][2]                # real position 'k' of particle 'β' 
+    l = rand(rng, 1:nbrs[k][2][2])                        # random neighboring site 'l'
+    beta_spin = get_spindex_type(particle_positions[beta][1])
+    
+    # checks occupation against spin species of particle 'β'
+    # if site is unoccupied by same spin species, hop is possible
+    if number_operator(l,pconfig)[beta_spin] == 1
+        if verbose == true
+            println("HOP NOT POSSIBLE!")  
+        end
+        return false 
+    else
+        if verbose == true
+            println("HOP POSSIBLE!")
+        end
+
+        # begin Metropolis algorithm
+
+        # get Jastrow ratios (element of T vector)
+        Rⱼ₁ = get_jastrow_ratio(k, l, jastrow1)    
+        Rⱼ₂ = get_jastrow_ratio(k, l, jastrow2)
+        Rⱼ₃ = get_jastrow_ratio(k, l, jastrow3)
+
+        # get wavefunction ratio (correpsonding element of Green's function)
+        Rₛ = W[k,l]        
+
+        acceptance_prob = Rⱼ₁ * Rⱼ₂ * Rⱼ₃ * Rⱼ * Rₛ * Rₛ     
+
+        if acceptance_prob > 1 || rand(rng,dist,1) < acceptance_prob
+            if verbose == true
+                println("HOP ACCEPTED!")
+            end
+
+            # do particle hop
+            
+            return 1, beta, beta_spin, k, l  # acceptance, particle number, particle spin, initial site, final site
+        else
+            if verbose == false
+               println("HOP REJECTED")
+            end
+        end
+    end
+end
+
 
 """
     do_particle_hop!( local_acceptance::LocalAcceptance, pconfig::Matrix{Int})
@@ -160,7 +280,7 @@ function local_fermion_update!(model_geometry, tight_binding_model, jastrow, pco
     particle_positions = get_particle_positions(pconfig)
 
     # accept/reject (Metropolis)
-    proposed_hop = metropolis(particle_positions, rng)
+    proposed_hop = metropolis(W, jastrow, particle_positions, rng)
 
     # perform hopping
     do_particle_hop!(proposed_hop, pconfig)

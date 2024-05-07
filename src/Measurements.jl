@@ -19,13 +19,20 @@ function initialize_measurement_container(model_geometry, N_burnin, N_updates)
 
     scalar_measurements = Dict{String, Any}([("density",zeros(AbstractFloat, norbs)),        # average density per orbital species
                                 ("double_occ",zeros(AbstractFloat, norbs)),                  # average double occupancy per orbital species
-                                ])                                                           # TODO: add fields for variational parameters 
+                                ])                                                           # TODO: add fields for tracking variational parameters during SR
 
     correlation_measurements = Dict()
 
+    # automatically add measurements for variational derivatives
+    local_measurements = 0.0 
+    global_measurements = []
+    scalar_measurements["Δk"] = (zeros(AbstractFloat, norbs),local_measurements,global_measurements)
+    scalar_measurements["ΔkΔkp"] = (zeros(AbstractFloat, norbs),local_measurements,global_measurements)
+    scalar_measurements["ΔkE"] = (zeros(AbstractFloat, norbs),local_measurements,global_measurements)
+
     measurement_container = (
             scalar_measurements       = scalar_measurements,          
-            correlation_measurements  = correlation_measurements,                          
+            correlation_measurements  = correlation_measurements,                       
             L                         = L,
             N                         = N,
             norbs                     = norbs,
@@ -38,7 +45,7 @@ end
 
 
 """
-initialize_measurements!()
+initialize_measurements!(measurement_container::, observable::AbstractString )
 
 For a certain type of measurment (scalar or correlation), initializes the arrays
 necessary to store measurements in respective bins.
@@ -89,6 +96,7 @@ function initialize_correlation_measurements!(measurement_container,  correlatio
 end
 
 # accumulator for measurments
+# this is reflected in the key entries for each measurement dictionary
     # # through the course of the simulation, we estimate the expectation value of observable O using ⟨O⟩ ≈ N⁻¹ ∑ₓ Oₗ(x)
     # by 'local' here, I mean the argument of the sums used to obtain the expectation value
     # local_measurements = 0.0         # Oₗ(x). This is added to during the course of the simulation: local_val += measured

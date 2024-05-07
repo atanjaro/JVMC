@@ -71,10 +71,6 @@ path_to_vpars = "/path/to/variational/parameters/"
 parameters_to_optimize = ["Δs", "μ"]
 parameter_values = [0.3, μ]
 
-# TODO: option to read in initial variational parameter set
-# readin_vpars = false
-# path_to_vpars = /path/to/jastrow/parameters/
-
 
 ##################################
 ## DEFINE SIMULATION PARAMETERS ##
@@ -156,7 +152,7 @@ bond_x = Bond((1,1), [1,0])
 bond_y = Bond((1,1), [0,1])
 # define next nearest neighbor bonds
 bond_xy = Bond((1,1), [1,1])
-bond_yx = Bond((1,1), [1,-1])[4]
+bond_yx = Bond((1,1), [1,-1])
 
 # vector of 2D bonds
 bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
@@ -199,7 +195,7 @@ W = get_equal_greens(M, D)
 density_jastrow = build_jastrow_factor("density")
 
 # construct spin Jastrow factor 
-spin_jastrow = build_jastrow_factor("spin")
+# spin_jastrow = build_jastrow_factor("spin")
 
 # construct electron-phonon density Jastrow factor 
 # eph_jastrow = build_jastrow_factor("electron-phonon")

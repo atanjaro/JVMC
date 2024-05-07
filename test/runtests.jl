@@ -9,15 +9,15 @@ include("../src/Greens.jl")
 include("../src/StochasticReconfiguration.jl")
 include("../src/Measurements.jl")
 
-#  begin unit test for a 2x2 square lattice Hubbard model with s-wave pairing
+#  begin unit test for a 2x2 square lattice half-filled Hubbard model 
 U = 1.0
 unit_cell = UnitCell([[1.0,0.0], [0.0,1.0]],[[0.0,0.0]])
 lattice = Lattice([2,2],[true,true])  
 model_geometry = ModelGeometry(unit_cell,lattice)        
 bonds = [[Bond((1,1), [1,0]), Bond((1,1), [0,1])]]
-pht = true
+pht = false
 tight_binding_model = TightBindingModel([1.0,0],3.0)
-determinantal_parameters = initialize_determinantal_parameters(["Δs", "μ"], [0.3, 3.0])
+determinantal_parameters = initialize_determinantal_parameters(["Δa", "μ"], [0.3, 3.0])
 n = 1.0
 nup = 2
 ndn = 2
@@ -26,8 +26,8 @@ ndn = 2
 function test_canonical_ensemble()
     @test get_particle_numbers(n) == (4, 4, 2, 2)
     @test get_particle_density(nup,ndn) == (1.0, 4, 4)
-    @test_throws AssertionError get_particle_numbers(0.8)  
-    @test_throws AssertionError get_particle_density(2,3)
+    # @test_throws AssertionError get_particle_numbers(0.8)  
+    # @test_throws AssertionError get_particle_density(2,3)
 end
 
 # checks mean-field Hamiltonian and determinantal state

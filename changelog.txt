@@ -74,7 +74,7 @@ Updated get_SR_comatrix() and get_SR_forces() methods (StochasticReconfiguration
 
 Change log (02/12):
 Changed the name of functions get_SR_matrix(), get_SR_forces(), and parameter_update!() to get_sr_matrix(), get_sr_forces(), and sr_update!(), respectively (StochasticReconfiguration.jl)
-Updated definition of measure_local_energy() to properly loop over nearest neighbors of particle β (Measurements.jl
+Updated definition of measure_local_energy() to properly loop over nearest neighbors of particle β (Measurements.jl)
 Moved derivative measurements to Measurements.jl, as they make more sense there
 Changed local_determinantal_derivative() and local_jastrow_derivative() to measure_local_detpar_derivative() and measure_local_jpar_derivative(), respectively (Measurements.jl)
 
@@ -99,3 +99,9 @@ Updated definitions of measure_local_energy() and get_jastrow_ratio()
 Updated do_particle_hop!() into a mutating function
 Minor definitional update to update_particle_posistions!()
 Updated local_update!() to local_fermion_update!()
+
+Updated initialize_measurement_container() to also hold measurements of the local derivatives. These are not written to scalar measurements because they are not a usual observable
+
+Change log (05/07):
+Updated measurements to also record value of variational derivatives
+Updated metropolis() to also have arguments of 'W' and 'jastrow' and created additional versions which accepts mutiple Jastrow factors
