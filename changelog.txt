@@ -105,3 +105,21 @@ Updated initialize_measurement_container() to also hold measurements of the loca
 Change log (05/07):
 Updated measurements to also record value of variational derivatives
 Updated metropolis() to also have arguments of 'W' and 'jastrow' and created additional versions which accepts mutiple Jastrow factors
+Updated generate_initial_onsite_phonon_configuration() to have the maximum upper bound be typemax(Int) (basically Inf)
+Updated generate_initial_bond_phonon_configuration() to have the maximum upper bound be typemax(Int) (basically Inf)
+
+Change log (05/08):
+Updated methods for Jastrow factors and associated updates
+Updated metropolis() as previous retrieval of the Green's function element resulted in every proposed hop being rejected
+Added function measure_Δk() which returns all derivatives of all variational parameters
+Added function measure_measure_ΔkE() to return the product of log derivatives with the local energy
+Added function measure_ΔkΔkp() to return the product of log derivatives
+
+Upcoming changes: 
+Need to update_equal_greens!() method as there is currently a dimension mistmatch when performing the update
+New bug found: need to re-check how the code checks for singular configurations during the initial config step
+Maybe add a new type(s) for performing measurements?
+
+Change log (05/10):
+Fixed bug in update_equal_greens!(), as the outer product was not being taken correctly
+Performed test of local_fermion_update!() up to parameter tracking

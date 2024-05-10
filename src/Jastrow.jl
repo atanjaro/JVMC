@@ -12,6 +12,8 @@ using Distances
 struct Jastrow
     # type of Jastrow parameter
     jastrow_type::AbstractString
+    # matrix of Jastrow parameters
+    jpar_matrix::Matrix{AbstractFloat}
     # T vector
     Tvec::Vector{AbstractFloat}
     # Jastrow parameter dictionary
@@ -161,7 +163,7 @@ function update_Tvec!(local_acceptance, jastrow, model_geometry)
     k = local_acceptance.fsite
 
     for i in 1:N
-        jastrow.Tvec[i] += jastrow.jpar_map[(i,l)] - jastrow.jpar_map[(i,k)] 
+        jastrow.Tvec[i] += jastrow.jpar_matrix[i,l] - jastrow.jpar_matrix[i,k] 
     end
 
     return nothing
@@ -180,7 +182,7 @@ function get_jastrow_ratio(l, k, jastrow)
     Tₗ = jastrow.Tvec[l]
     Tₖ = jastrow.Tvec[k]
 
-    jas_ratio = exp(-(Tₗ - Tₖ) + 0.0 - jastrow.jpar_map[(l,k)]) #0.0 ≡ jastrow.jpar_map[(l,l)], replace this if this doesn't work
+    jas_ratio = exp(-(Tₗ - Tₖ) + jastrow.jpar_matrix[l,l] - jastrow.jpar_matrix[l,k]) #jastrow.jpar_map[(l,k)]
 
     return jas_ratio
 end
@@ -206,7 +208,7 @@ function build_jastrow_factor(jastrow_type)
     end
     init_Tvec = get_Tvec(jpar_matrix,jastrow_type)
 
-    return Jastrow(jastrow_type, init_Tvec, jpar_map, num_jpars)
+    return Jastrow(jastrow_type, jpar_matrix, init_Tvec, jpar_map, num_jpars)
 end
 
 

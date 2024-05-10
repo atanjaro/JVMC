@@ -218,6 +218,52 @@ end
 
 
 """
+    measure_Δk( determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A )
+
+Returns all derivatives for all variational parameters. The first 'p' are derivatives of 
+determinantal parameters and the rest are derivatives of Jastrow parameters.
+
+"""
+function measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
+
+    detpar_derivatives = measure_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
+    jpar_derivatives = measure_local_jpar_derivative(jastrow,pconfig)
+    
+    Δk = vcat(detpar_derivatives,jpar_derivatives)
+
+    return Δk
+end
+
+
+"""
+    measure_ΔkE( determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A )
+
+Returns the product of variational derivatives with the local energy.
+
+"""
+function measure_ΔkE(determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A)
+
+    Δk = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
+    E = measure_local_energy(model_geometry, tight_binding_model,jastrow,pconfig)
+
+    ΔkE = Δk * E
+
+    return ΔkE
+end
+
+
+function measure_ΔkΔkp()
+
+    Δk = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
+    Δkp = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
+
+    ΔkΔkp = Δk .* Δkp
+
+    return ΔkΔkp
+end 
+
+
+"""
     measure_double_occ( model_geometry::ModelGeometry, pconfig::Vector{Int} )
 
 Measure the average double occupancy ⟨D⟩ = N⁻¹ ∑ᵢ ⟨nᵢ↑nᵢ↓⟩.
@@ -282,7 +328,7 @@ Measure the local variational energy. Returns the total local energy,
 local kinetic energy, and local Hubbard energy.
 
 """
-function measure_local_energy(model_geometry, tight_binding_model, jastrow, particle_positions)
+function measure_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
 
     # generate neighbor table
     nbr_table = build_neighbor_table(bonds[1],
@@ -291,6 +337,9 @@ function measure_local_energy(model_geometry, tight_binding_model, jastrow, part
 
     # gnerate neighbor map
     nbr_map = map_neighbor_table(nbr_table)
+
+    # particle positions
+    particle_positions = get_particle_positions(pconfig)
 
     # loop over different electrons k
     E_loc_kinetic = 0.0

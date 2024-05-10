@@ -74,10 +74,8 @@ This would apply to Holstein and optical-SSH models.
 function generate_initial_onsite_phonon_configuration()
     init_phconfig = zeros(Int, model_geometry.lattice.N)  
 
-    max_upper_bound = 100        # adjust as needed
-
     for i in 1:model_geometry.lattice.N
-        upper_bound = rand(rng, 1:max_upper_bound)
+        upper_bound = rand(rng, 1:typemax(Int))
         init_phconfig[i] = rand(rng, 0:upper_bound) 
     end
 
@@ -93,19 +91,15 @@ This would apply only to the bond-SSH model.
 
 """
 function generate_initial_bond_phonon_configuration()
-    init_phconfig = zeros(Int, 2*model_geometry.lattice.N)  # each entry corresponds to a bond on the lattice
-                                                            # TODO: how to track the number of each bond?
+    init_phconfig = zeros(Int, 2 * model_geometry.lattice.N)  
 
-    max_upper_bound = 100        # adjust as needed
-
-    for i in 1:2*model_geometry.lattice.N
-        upper_bound = rand(rng, 1:max_upper_bound)
+    for i in 1:2 * model_geometry.lattice.N
+        upper_bound = rand(rng, 1:typemax(Int))
         init_phconfig[i] = rand(rng, 0:upper_bound) 
     end
 
     return init_phconfig
 end
-
 
 
 
@@ -200,12 +194,11 @@ If a particle 'β' at site 'k' successfully hops to a neighboring site 'l', upda
 position in 'particle_positions' as well as 'pconfig.
 
 """
-# TODO: need to update
 function update_particle_position!(proposed_hop, particle_positions)
-    if proposed_hop.acceptance == true
-        particle_positions[proposed_hop.particle][1] = get_spindices_from_index(proposed_hop.fsite)[proposed_hop.spin]
-        particle_positions[proposed_hop.particle][2] = proposed_hop.fsite
-        return particle_positions
+    if proposed_hop.acceptance == 1
+        # Update the pair within the vector
+        particle_positions[proposed_hop.particle] = Pair(get_spindices_from_index(proposed_hop.fsite)[proposed_hop.spin], proposed_hop.fsite)
+        return nothing
     else
         # DO NOTHING
         return nothing
