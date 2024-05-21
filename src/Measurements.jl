@@ -1,6 +1,7 @@
 using LatticeUtilities
 using LinearAlgebra
 
+
 """
 initialize_measurement_container(model_geometry::ModelGeometry)
 
@@ -17,21 +18,23 @@ function initialize_measurement_container(model_geometry, N_burnin, N_updates)
     norbs = unit_cell.n
     N_iterations = N_burnin + N_updates
 
+    local_measurements = 0.0 
+    expectation = []
+
     scalar_measurements = Dict{String, Any}([("density",zeros(AbstractFloat, norbs)),        # average density per orbital species
                                 ("double_occ",zeros(AbstractFloat, norbs)),                  # average double occupancy per orbital species
-                                ])                                                           # TODO: add fields for tracking variational parameters during SR
+                                ])                                                           
+
+    derivative_measurements = Dict{String, Any}([("Δk", (zeros(AbstractFloat, norbs),local_measurements,expectation)),        
+                                ("ΔkΔkp", (zeros(AbstractFloat, norbs),local_measurements,expectation)),
+                                ("ΔkE", (zeros(AbstractFloat, norbs),local_measurements,expectation))                  
+                                ])    
 
     correlation_measurements = Dict()
 
-    # automatically add measurements for variational derivatives
-    local_measurements = 0.0 
-    global_measurements = []
-    scalar_measurements["Δk"] = (zeros(AbstractFloat, norbs),local_measurements,global_measurements)
-    scalar_measurements["ΔkΔkp"] = (zeros(AbstractFloat, norbs),local_measurements,global_measurements)
-    scalar_measurements["ΔkE"] = (zeros(AbstractFloat, norbs),local_measurements,global_measurements)
-
     measurement_container = (
-            scalar_measurements       = scalar_measurements,          
+            scalar_measurements       = scalar_measurements,
+            derivative_measurements   = derivative_measurements,          
             correlation_measurements  = correlation_measurements,                       
             L                         = L,
             N                         = N,
@@ -55,16 +58,16 @@ function initialize_measurements!(measurement_container, observable)
     (; scalar_measurements,N,norbs) = measurement_container
 
     local_measurements = 0.0 
-    global_measurements = []
+    expectation = []
 
     if observable == "energy"
-        # For energy, store tuple (zeros(AbstractFloat, norbs), local_measurements, global_measurements)
-        scalar_measurements["global_energy"] = (zeros(AbstractFloat, norbs),local_measurements,global_measurements)
-        # scalar_measurements["global_energy"] = local_measurements, global_measurements
+        # For energy, store tuple (zeros(AbstractFloat, norbs), local_measurements, expectation)
+        scalar_measurements["energy"] = (zeros(AbstractFloat, norbs),local_measurements,expectation)
+        # scalar_measurements["global_energy"] = local_measurements, expectation
     elseif observable == "stripe"
-        # For stripe, store tuple (zeros(AbstractFloat, norbs*N), local_measurements, global_measurements)
-        scalar_measurements["site_dependent_density"] = (zeros(AbstractFloat, norbs*N),local_measurements,global_measurements)
-        scalar_measurements["site_dependent_spin"] = (zeros(AbstractFloat, norbs*N),local_measurements,global_measurements)
+        # For stripe, store tuple (zeros(AbstractFloat, norbs*N), local_measurements, expectation)
+        scalar_measurements["site_dependent_density"] = (zeros(AbstractFloat, norbs*N),local_measurements,expectation)
+        scalar_measurements["site_dependent_spin"] = (zeros(AbstractFloat, norbs*N),local_measurements,expectation)
     elseif observable == "phonon_number"
         # For phonon number
     elseif observable == "displacement"
@@ -85,11 +88,11 @@ function initialize_correlation_measurements!(measurement_container,  correlatio
     (; correlation_measurements) = measurement_container
 
     if correlation == "density"
-        # scalar_measurements["density-density correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,global_measurements = [])
+        # scalar_measurements["density-density correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,expectation = [])
     elseif correlation == "spin"
-        # scalar_measurements["spin-spin correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,global_measurements = [])
+        # scalar_measurements["spin-spin correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,expectation = [])
     elseif correlation == "pair"
-        # scalar_measurements["pair correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,global_measurements = [])
+        # scalar_measurements["pair correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,expectation = [])
     end
 
     return nothing
@@ -102,17 +105,17 @@ end
     # local_measurements = 0.0         # Oₗ(x). This is added to during the course of the simulation: local_val += measured
     # iterations = 0.0        # N. This is incremented during the simulation, up to N_burnin + N_updates: iterations +=1
     # by 'global' here, I mean the sum of local measurements to obtain the expectation value
-    # global_measurements = []   # record the expectation value for each iteration: push!(total_local_vals, local_val/iterations)
+    # expectation = []   # record the expectation value for each iteration: push!(total_local_vals, local_val/iterations)
 
 
 """
-    measure_local_jpar_derivative( jastrow::Jastrow, pconfig::Vector{Int} )
+    get_local_jpar_derivative( jastrow::Jastrow, pconfig::Vector{Int} )
 
-Performs local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂vₗₘ, with respect to the kth Jastrow parameter vₗₘ. Returns 
+Calculates the local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂vₗₘ, with respect to the kth Jastrow parameter vₗₘ. Returns 
 a vector of derivatives.
 
 """
-function measure_local_jpar_derivative(jastrow, pconfig)
+function get_local_jpar_derivative(jastrow, pconfig)
 
     # number of Jastrow parameters
     num_jpars = jastrow.num_jpars
@@ -175,14 +178,14 @@ end
 
 
 """
-    measure_local_detpar_derivative( determinantal_parameters::DeterminantalParameters, model_geometry::ModelGeometry
+    get_local_detpar_derivative( determinantal_parameters::DeterminantalParameters, model_geometry::ModelGeometry
                                      pconfig::Vector{Int}, W::Matrix{AbstractFloat}, A::Matrix{AbstractFloat}  )
 
-Performs local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂αₖ, with respect to the kth variational parameter αₖ,
+Calculates the local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂αₖ, with respect to the kth variational parameter αₖ,
 in the determinantal part of the wavefunction. Returns a vector of derivatives.
 
 """
-function measure_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)  
+function get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)  
 
     # dimensions
     dims = model_geometry.unit_cell.n * model_geometry.lattice.N
@@ -220,115 +223,84 @@ end
 """
     measure_Δk( determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A )
 
-Returns all derivatives for all variational parameters. The first 'p' are derivatives of 
-determinantal parameters and the rest are derivatives of Jastrow parameters.
+Measures logarithmic derivatives for all variational parameters. The first 'p' are derivatives of 
+determinantal parameters and the rest are derivatives of Jastrow parameters. Measurments are then written
+to the measurement container.
 
 """
-function measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
+function measure_Δk!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
 
-    detpar_derivatives = measure_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
-    jpar_derivatives = measure_local_jpar_derivative(jastrow,pconfig)
+    detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
+    jpar_derivatives = get_local_jpar_derivative(jastrow,pconfig)
     
     Δk = vcat(detpar_derivatives,jpar_derivatives)
 
-    return Δk
+    # write to measurement container
+    local_measurement = measurement_container.derivative_measurements["Δk"][2]
+    local_measurement = local_measurement .+ Δk
+    current_measurement = measurement_container.derivative_measurements["Δk"][2] / measurement_container.N_iterations # should it be total N_iter or current?
+    push!(measurement_container.derivative_measurements["Δk"][3], current_measurement)
+
+    return nothing
 end
 
 
 """
     measure_ΔkE( determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A )
 
-Returns the product of variational derivatives with the local energy.
+Measures the product of variational derivatives with the local energy. Measurments are then written
+to the measurement container.
 
 """
-function measure_ΔkE(determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A)
+function measure_ΔkE!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A)
 
     Δk = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
-    E = measure_local_energy(model_geometry, tight_binding_model,jastrow,pconfig)
+    E = get_local_energy(model_geometry, tight_binding_model,jastrow,pconfig)
 
     ΔkE = Δk * E
 
-    return ΔkE
+    # write to measurement container
+    local_measurement = measurement_container.derivative_measurements["ΔkE"][2]
+    local_measurement = local_measurement .+ ΔkE
+    current_measurement = measurement_container.derivative_measurements["ΔkE"][2] / measurement_container.N_iterations # should it be total N_iter or current?
+    push!(measurement_container.derivative_measurements["ΔkE"][3], current_measurement)
+     
+
+    return nothing
 end
 
 
-function measure_ΔkΔkp()
+"""
+    measure_ΔkΔkp(  )
+
+Measures the product of variational derivatives with other variational derivatives. Measurments are then written
+to the measurement container.
+
+"""
+function measure_ΔkΔkp!()
 
     Δk = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
     Δkp = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
 
     ΔkΔkp = Δk .* Δkp
 
-    return ΔkΔkp
+    # write to measurement container
+    local_measurement = measurement_container.derivative_measurements["ΔkΔkp"][2]
+    local_measurement = local_measurement .+ ΔkΔkp
+    current_measurement = measurement_container.derivative_measurements["ΔkΔkp"][2] / measurement_container.N_iterations # should it be total N_iter or current?
+    push!(measurement_container.derivative_measurements["ΔkΔkp"][3], current_measurement)
+
+    return nothing
 end 
 
 
 """
-    measure_double_occ( model_geometry::ModelGeometry, pconfig::Vector{Int} )
+    get_local_energy(model_geometry::ModelGeometry, tight_binding_model::TightBindingModel, jastrow::Jastrow, particle_positions:: )
 
-Measure the average double occupancy ⟨D⟩ = N⁻¹ ∑ᵢ ⟨nᵢ↑nᵢ↓⟩.
-
-"""
-function measure_double_occ(pconfig, model_geometry)
-    nup_ndn = 0.0
-
-    for i in 1:model_geometry.lattice.N
-        nup_ndn += number_operator(i, pconfig)[1] * (1 - number_operator(i, pconfig)[2])
-    end
-    
-    return nup_ndn / model_geometry.lattice.N
-end
-
-
-
+Calculates the local variational energy. Returns the total local energy and writes to the measurement container.
 
 """
-    measure_n( site::Int, pconfig::Vector{Int} )
-
-Measure the local particle density ⟨n⟩.
-
-"""
-function measure_n(site)
-    loc_den = number_operator(site, pconfig)[1] + 1 - number_operator(i, pconfig)[2]
-
-    return loc_den
-end
-
-
-"""
-    measure_ρ( site::int )
-
-Measure the local excess hole density ⟨ρ⟩.
-
-"""
-function measure_ρ(site)
-    ρ = 1 - measure_n(site)
-
-    return ρ
-end
-
-
-"""
-    measure_s( site::Int, pconfig::Vector{Int} )
-
-Measure the local spin.
-
-"""
-function measure_s()
-    loc_spn = number_operator(site,pconfig)[1] - 1 + number_operator(i,pconfig)[2]
-
-    return loc_spn
-end
-
-
-"""
-    measure_local_energy(model_geometry::ModelGeometry, tight_binding_model::TightBindingModel, jastrow::Jastrow, particle_positions:: )
-
-Measure the local variational energy. Returns the total local energy,
-local kinetic energy, and local Hubbard energy.
-
-"""
-function measure_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
+function get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
 
     # generate neighbor table
     nbr_table = build_neighbor_table(bonds[1],
@@ -374,12 +346,31 @@ function measure_local_energy(model_geometry, tight_binding_model, jastrow, pcon
     return E_loc
 end
 
+"""
+    measure_local_energy( measurement_container, model_geometry::ModelGeometry, tight_binding_model::TightBindingModel, 
+                jastrow::Jastrow, particle_positions:: )
+
+Measures the total local energy and writes to the measurement container.
+
+"""
+function measure_local_energy(measurement_container, model_geometry, tight_binding_model, jastrow, pconfig)
+    E_loc = get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
+
+    # write to measurement container
+    local_measurement = measurement_container.derivative_measurements["energy"][2]
+    local_measurement = local_measurement + E_loc
+    current_measurement = measurement_container.derivative_measurements["energy"][2] / measurement_container.N_iterations # should it be total N_iter or current?
+    push!(measurement_container.derivative_measurements["energy"][3], current_measurement)
+
+    return nothing
+end
+
 
 
 """
     measure_global_energy( model_geometry::ModelGeometry )
 
-Measure the global variational energy ⟨E⟩.
+Measure the global variational energy ⟨E⟩. This is intended to used at the end of the simulation.
 
 """
 function measure_global_energy(model_geometry, N_bins, bin_size)
@@ -392,6 +383,69 @@ function measure_global_energy(model_geometry, N_bins, bin_size)
 
     return E_global
 end
+
+
+"""
+    measure_double_occ( model_geometry::ModelGeometry, pconfig::Vector{Int} )
+
+Measure the average double occupancy ⟨D⟩ = N⁻¹ ∑ᵢ ⟨nᵢ↑nᵢ↓⟩.
+
+"""
+function measure_double_occ!(measurement_container, pconfig, model_geometry)
+    nup_ndn = 0.0
+
+    for i in 1:model_geometry.lattice.N
+        nup_ndn += number_operator(i, pconfig)[1] * (1 - number_operator(i, pconfig)[2])
+    end
+
+    dblocc = nup_ndn / model_geometry.lattice.N
+
+    # write to measurment container
+    
+    
+    return nothing
+end
+
+
+"""
+    measure_n( site::Int, pconfig::Vector{Int} )
+
+Measure the local particle density ⟨n⟩.
+
+"""
+function measure_n(site)
+    loc_den = number_operator(site, pconfig)[1] + 1 - number_operator(i, pconfig)[2]
+
+    return loc_den
+end
+
+
+"""
+    measure_ρ( site::int )
+
+Measure the local excess hole density ⟨ρ⟩.
+
+"""
+function measure_ρ(site)
+    ρ = 1 - measure_n(site)
+
+    return ρ
+end
+
+
+"""
+    measure_s( site::Int, pconfig::Vector{Int} )
+
+Measure the local spin.
+
+"""
+function measure_s()
+    loc_spn = number_operator(site,pconfig)[1] - 1 + number_operator(i,pconfig)[2]
+
+    return loc_spn
+end
+
+
 
 
 """

@@ -36,37 +36,6 @@ function local_acceptance()
 end
 
 
-## DEPRECATED
-# """
-#     propose_random_hop( particle_positions::Vector{Dict{Any,Any}} )
-
-# Randomly selects a particle 'β' at site 'k' to hop to a neighboring site 'l'.
-
-# """
-# function propose_random_hop(particle_positions)
-#     nbr_table = build_neighbor_table(bonds[1],
-#                                     model_geometry.unit_cell,
-#                                     model_geometry.lattice)
-#     nbrs = map_neighbor_table(nbr_table)
-#     beta = rand(rng, 1:trunc(Int,Np))                   # randomly select some particle in the lattice
-#     k = particle_positions[beta][2]                # real position 'k' of particle 'β' 
-#     l = rand(rng, 1:nbrs[k][2][2])                        # random neighboring site 'l'
-#     beta_spin = get_spindex_type(particle_positions[beta][1])
-    
-#     # checks occupation against spin species of particle 'β'
-#     # if site is unoccupied by same spin species, hop is possible
-#     if number_operator(l,pconfig)[beta_spin] == 1
-#         if verbose == true
-#             println("HOP NOT POSSIBLE!")  
-#         end
-#         return false 
-#     else
-#         if verbose == true
-#             println("HOP POSSIBLE!")
-#         end
-#         return true, beta, beta_spin, k, l  # acceptance, particle number, particle spin, initial site, final site
-#     end
-# end
 
 
 """
@@ -110,6 +79,131 @@ function metropolis(W, jastrow, particle_positions, rng)
                             # how elements are accessed
 
         acceptance_prob = Rⱼ * Rⱼ * Rₛ * Rₛ     
+
+        if acceptance_prob > 1 || rand(rng, Uniform(0, 1), 1)[1] < acceptance_prob
+            if verbose == true
+                println("HOP ACCEPTED!")
+            end
+
+            # do particle hop
+            
+            return LocalAcceptance(1, beta, beta_spin, k, l)  # acceptance, particle number, particle spin, initial site, final site
+        else
+            if verbose == true
+               println("HOP REJECTED")
+            end
+
+            return LocalAcceptance(0, beta, beta_spin, k, l)
+        end
+    end
+end
+
+
+"""
+    metropolis( W, jastrow1, jastrow2, particle_positions, rng )
+
+Perform accept/reject step of proposed hop using the Metropolis algorithm. If move is
+accepted, returns acceptance, particle β and it's spindex, initial position, and final
+position.
+
+"""
+
+function metropolis(W, jastrow1, jastrow2, particle_positions, rng)    
+    nbr_table = build_neighbor_table(bonds[1],
+                                    model_geometry.unit_cell,
+                                    model_geometry.lattice)
+    nbrs = map_neighbor_table(nbr_table)
+    beta = rand(rng, 1:trunc(Int,Np))                   # randomly select some particle in the lattice
+    k = particle_positions[beta][2]                # real position 'k' of particle 'β' 
+    l = rand(rng, 1:nbrs[k][2][2])                        # random neighboring site 'l'
+    beta_spin = get_spindex_type(particle_positions[beta][1])
+    
+    # checks occupation against spin species of particle 'β'
+    # if site is unoccupied by same spin species, hop is possible
+    if number_operator(l,pconfig)[beta_spin] == 1
+        if verbose == true
+            println("HOP NOT POSSIBLE!")  
+        end
+        return LocalAcceptance(0, beta, beta_spin, k, l)
+    else
+        if verbose == true
+            println("HOP POSSIBLE!")
+        end
+
+        # begin Metropolis algorithm
+
+        # get Jastrow ratios (element of T vector)
+        Rⱼ₁ = get_jastrow_ratio(k, l, jastrow1)    
+        Rⱼ₂ = get_jastrow_ratio(k, l, jastrow2)
+
+        # get wavefunction ratio (correpsonding element of Green's function)
+        Rₛ = W[l, beta]        # is this the source of the bug? need to check the definition of W and 
+                            # how elements are accessed
+
+        acceptance_prob = Rⱼ₁ * Rⱼ₁ * Rⱼ₂ * Rⱼ₂ * Rₛ * Rₛ     
+
+        if acceptance_prob > 1 || rand(rng, Uniform(0, 1), 1)[1] < acceptance_prob
+            if verbose == true
+                println("HOP ACCEPTED!")
+            end
+
+            # do particle hop
+            
+            return LocalAcceptance(1, beta, beta_spin, k, l)  # acceptance, particle number, particle spin, initial site, final site
+        else
+            if verbose == true
+               println("HOP REJECTED")
+            end
+
+            return LocalAcceptance(0, beta, beta_spin, k, l)
+        end
+    end
+end
+
+
+"""
+    metropolis( W, jastrow1, jastrow2, jastrow3, particle_positions, rng )
+
+Perform accept/reject step of proposed hop using the Metropolis algorithm. If move is
+accepted, returns acceptance, particle β and it's spindex, initial position, and final
+position.
+
+"""
+
+function metropolis(W, jastrow1, jastrow2, jastrow3, particle_positions, rng)    
+    nbr_table = build_neighbor_table(bonds[1],
+                                    model_geometry.unit_cell,
+                                    model_geometry.lattice)
+    nbrs = map_neighbor_table(nbr_table)
+    beta = rand(rng, 1:trunc(Int,Np))                   # randomly select some particle in the lattice
+    k = particle_positions[beta][2]                # real position 'k' of particle 'β' 
+    l = rand(rng, 1:nbrs[k][2][2])                        # random neighboring site 'l'
+    beta_spin = get_spindex_type(particle_positions[beta][1])
+    
+    # checks occupation against spin species of particle 'β'
+    # if site is unoccupied by same spin species, hop is possible
+    if number_operator(l,pconfig)[beta_spin] == 1
+        if verbose == true
+            println("HOP NOT POSSIBLE!")  
+        end
+        return LocalAcceptance(0, beta, beta_spin, k, l)
+    else
+        if verbose == true
+            println("HOP POSSIBLE!")
+        end
+
+        # begin Metropolis algorithm
+
+        # get Jastrow ratios (element of T vector)
+        Rⱼ₁ = get_jastrow_ratio(k, l, jastrow1)    
+        Rⱼ₂ = get_jastrow_ratio(k, l, jastrow2)
+        Rⱼ₃ = get_jastrow_ratio(k, l, jastrow3)
+
+        # get wavefunction ratio (correpsonding element of Green's function)
+        Rₛ = W[l, beta]        # is this the source of the bug? need to check the definition of W and 
+                            # how elements are accessed
+
+        acceptance_prob = Rⱼ₁ * Rⱼ₁ * Rⱼ₂ * Rⱼ₂ * Rⱼ₃ * Rⱼ₃ * Rₛ * Rₛ     
 
         if acceptance_prob > 1 || rand(rng, Uniform(0, 1), 1)[1] < acceptance_prob
             if verbose == true
@@ -179,7 +273,6 @@ function local_fermion_update!(model_geometry, tight_binding_model, jastrow, pco
 
     # update Jastrow
     update_Tvec!(hop_step, density_jastrow, model_geometry)         # PASSED
-    # update_jastrow!()
 
     # update variational parameters
     sr_update!()

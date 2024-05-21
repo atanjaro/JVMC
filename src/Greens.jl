@@ -50,7 +50,7 @@ function update_equal_greens!(local_acceptance,W)
     cᵦ = W[:,local_acceptance.particle]
 
     # subtract 1 from βth component of rₗ
-    rₗ[local_acceptance.particle] = rₗ[local_acceptance.particle] - 1
+    rₗ[local_acceptance.particle] -= 1
 
     # get W'
     W = W - (cᵦ * rₗ'/ W[local_acceptance.fsite,local_acceptance.particle])

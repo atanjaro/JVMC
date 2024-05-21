@@ -32,31 +32,20 @@ function get_sr_comatrix()
 
     # total number of variational parameters
     num_detpars = determinantal_parameters.num_detpars
-    num_jpars = jastrow.num_jpars 
+    num_jpars = density_jastrow.num_jpars 
     num_vpars = num_detpars + num_jpars 
 
     # initialize covariance matrix
     S = zeros(AbstractFloat, num_vpars, num_vpars)
 
     # measure local parameters derivatives for this configuration
-    j_derivatives = measure_local_jpar_derivative(jastrow, pconfig)
-    d_derivatives = measure_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
-
-    # concatenate derivatives
-    derivatives = vcat(d_derivatives,j_derivatives)
+    Δk = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
 
     for (i,j) in zip(num_vpars, num_vpars)
         # populate SR matrix
     end
 
    
-    # the first num_detpars are determinantal parameters, the rest are Jastrow parameters
-    # the first num_detpars rows will be for the determinantal parameters, the rest will be for the Jastrow parameters
-        
-
-    
-    # Δk = local_determinantal_derivative(A, W, acceptance, model_geometry, parameters_to_optimize)
-    # Δk_Δkprime = local_determinantal_derivative(A, W, acceptance, model_geometry, parameters_to_optimize) * local_determinantal_derivative(A, W, acceptance, model_geometry, parameters_to_optimize)
 
     # S = Δk_Δkprime - Δk * transpose(Δk)
     

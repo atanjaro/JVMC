@@ -211,6 +211,16 @@ function build_jastrow_factor(jastrow_type)
     return Jastrow(jastrow_type, jpar_matrix, init_Tvec, jpar_map, num_jpars)
 end
 
+"""
+    update_jparams!()
+
+Updates the table of Jastrow parameters. 
+"""
+function update_jparams!(jastrow)
+
+
+end
+
 
 """
     recalc_Tvec(Tᵤ::Vector{AbstractFloat}, δT::AbstractFloat)

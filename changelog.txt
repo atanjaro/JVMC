@@ -116,10 +116,20 @@ Added function measure_measure_ΔkE() to return the product of log derivatives w
 Added function measure_ΔkΔkp() to return the product of log derivatives
 
 Upcoming changes: 
-Need to update_equal_greens!() method as there is currently a dimension mistmatch when performing the update
+Need to update_equal_greens!() method as there is currently a dimension mistmatch when performing the update FIXED ON 05/10
 New bug found: need to re-check how the code checks for singular configurations during the initial config step
 Maybe add a new type(s) for performing measurements?
 
-Change log (05/10):
+Change log (05/10, 05/21):
 Fixed bug in update_equal_greens!(), as the outer product was not being taken correctly
 Performed test of local_fermion_update!() up to parameter tracking
+Re-updated metropolis() method to also handle multiple jastrow factors
+Changed measure_derivatives() functions to get_derivatives(), and changed measure_local_energy() to get_local_energy(). Any
+      instance of measure will mean that the value is tracked in the measurement container
+Updated measurement container to separate derivative measurments as it's own sub-container also changed 'global_measurements' to 'expectation', 
+      as this makes more sense and will not get confused with the true global value at the end of the simulation
+Updated measure_() methods to write local values to the measurement container
+
+Upcoming changes: 
+Need to factor in binning for the measurment container (should be simple change)
+Need to update SR method accounting for changes in measurements (SR matrix, vector population)
