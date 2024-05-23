@@ -92,6 +92,38 @@ function get_num_vpars()
 
 end
 
+
+"""
+    cat_vpars(determinantal_parameters, jastrow)
+
+Generates an array combining all values of determinantal and Jastrow parameters.
+
+"""
+function cat_vpars(determinantal_parameters, jastrow)
+    jpars = [v[2] for v in values(jastrow.jpar_map)]
+    detpars = determinantal_parameters.vals
+    
+    # concatenate variational parameters
+    vpar_array = vcat(detpars, jpars)
+    
+    return vpar_array
+end
+
+
+"""
+    get_parameter_indices()
+
+Get indices of variational parameters from its respective matrix.
+
+"""
+function get_parameter_indices(par_matrix)
+    nonzero_indices = findall(x -> x != 0, par_matrix)
+
+    parameter_indices = sort(nonzero_indices, by=x->(x[1], x[2]))
+
+    return parameter_indices
+end 
+
 # end # of module
 
 

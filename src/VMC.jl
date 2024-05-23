@@ -275,11 +275,7 @@ function local_fermion_update!(model_geometry, tight_binding_model, jastrow, pco
     update_Tvec!(hop_step, density_jastrow, model_geometry)         # PASSED
 
     # update variational parameters
-    sr_update!()
-    update_parameters!()
-    # need to account for number of parameters being optimized
-    # need to update value of parameter, as well as keep track of it's history over the N_updates
-    # perhaps store the histories in a num_vaprs by N_updates matrix?
+    sr_update!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A, η, dt)
 
     return acceptance_rate, pconfig, jastrow, W, vpars 
 end

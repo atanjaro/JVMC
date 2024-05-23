@@ -133,3 +133,16 @@ Updated measure_() methods to write local values to the measurement container
 Upcoming changes: 
 Need to factor in binning for the measurment container (should be simple change)
 Need to update SR method accounting for changes in measurements (SR matrix, vector population)
+
+Change log (05/22):
+Updated method for calculating SR force vector 
+Updated method for calculating SR covariance matrix
+Updated the measure_ΔkΔkp!() method
+Moved get_parameter_indices() function to Utilities.jl
+Added cat_vpars() function to Utilities.jl for combining all variational parameters 
+Updated parameter_gradient() method
+
+Upcoming changes:
+Need to factor in binning for the measurment container (should be simple change)
+Add tracking (measurements) of  variational parameters
+

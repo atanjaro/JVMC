@@ -277,12 +277,11 @@ Measures the product of variational derivatives with other variational derivativ
 to the measurement container.
 
 """
-function measure_ΔkΔkp!()
+function measure_ΔkΔkp!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
 
     Δk = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
-    Δkp = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
 
-    ΔkΔkp = Δk .* Δkp
+    ΔkΔkp = Δk * Δk'
 
     # write to measurement container
     local_measurement = measurement_container.derivative_measurements["ΔkΔkp"][2]
