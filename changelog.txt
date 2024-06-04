@@ -146,3 +146,6 @@ Upcoming changes:
 Need to factor in binning for the measurment container (should be simple change)
 Add tracking (measurements) of  variational parameters
 
+Change log (05/23):
+Added parameter tracking to measurement container
+

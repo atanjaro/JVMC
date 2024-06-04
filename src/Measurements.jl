@@ -28,13 +28,19 @@ function initialize_measurement_container(model_geometry, N_burnin, N_updates)
     derivative_measurements = Dict{String, Any}([("Δk", (zeros(AbstractFloat, norbs),local_measurements,expectation)),        
                                 ("ΔkΔkp", (zeros(AbstractFloat, norbs),local_measurements,expectation)),
                                 ("ΔkE", (zeros(AbstractFloat, norbs),local_measurements,expectation))                  
-                                ])    
+                                ])      
+
+    parameter_measurements = Dict{String, Any}([("parameters", expectation)])    
+    # initial parameters values
+    push!(parameter_measurements["parameters"], variational_parameters)  
+
 
     correlation_measurements = Dict()
 
     measurement_container = (
             scalar_measurements       = scalar_measurements,
-            derivative_measurements   = derivative_measurements,          
+            derivative_measurements   = derivative_measurements,     
+            parameter_measurements    = parameter_measurements,     
             correlation_measurements  = correlation_measurements,                       
             L                         = L,
             N                         = N,
@@ -63,6 +69,8 @@ function initialize_measurements!(measurement_container, observable)
     if observable == "energy"
         # For energy, store tuple (zeros(AbstractFloat, norbs), local_measurements, expectation)
         scalar_measurements["energy"] = (zeros(AbstractFloat, norbs),local_measurements,expectation)
+        # initial energies
+        push!(scalar_measurements["energy"], ε₀) 
         # scalar_measurements["global_energy"] = local_measurements, expectation
     elseif observable == "stripe"
         # For stripe, store tuple (zeros(AbstractFloat, norbs*N), local_measurements, expectation)

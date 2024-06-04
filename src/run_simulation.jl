@@ -200,6 +200,9 @@ density_jastrow = build_jastrow_factor("density")
 # construct electron-phonon density Jastrow factor 
 # eph_jastrow = build_jastrow_factor("electron-phonon")
 
+# initialize variational parameters
+variational_parameters = cat_vpars(determinantal_parameters, density_jastrow)
+
 
 #############################
 ## INITIALIZE MEASUREMENTS ##
@@ -232,7 +235,7 @@ for n in 1:N_burnin
     # perform local updates to phonon dofs
     # local_phonon_update!(model_geometry, electron_phonon_model, jastrow, phconfig)
 
-    additional_info["phononic_local_acceptance_rate"] += acceptance_rate
+    # additional_info["phononic_local_acceptance_rate"] += acceptance_rate
 end
 
 # recompute W and Tvec(s) for numerical stabilization
@@ -257,7 +260,7 @@ for bin in 1:N_bins
         # perform local updates to phonon dofs
         # local_phonon_update!(model_geometry, electron_phonon_model, jastrow, phconfig)
 
-        additional_info["phononic_local_acceptance_rate"] += acceptance_rate
+        # additional_info["phononic_local_acceptance_rate"] += acceptance_rate
 
         #TODO: add additional numerical stabilization?
     end

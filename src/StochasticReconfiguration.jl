@@ -79,7 +79,7 @@ Reconfiguration.
 
 """
 function parameter_gradient(S, f, η)
-    # add small variation to diagonal of S
+    # add small variation to diagonal of S for numerical stbilization
     S += η + I
 
     # solve for δα using LU decomposition

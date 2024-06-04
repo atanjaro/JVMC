@@ -75,8 +75,8 @@ function metropolis(W, jastrow, particle_positions, rng)
         Rⱼ = get_jastrow_ratio(k, l, jastrow)    
 
         # get wavefunction ratio (correpsonding element of Green's function)
-        Rₛ = W[l, beta]        # is this the source of the bug? need to check the definition of W and 
-                            # how elements are accessed
+        Rₛ = W[l, beta]  
+                          
 
         acceptance_prob = Rⱼ * Rⱼ * Rₛ * Rₛ     
 
@@ -137,8 +137,8 @@ function metropolis(W, jastrow1, jastrow2, particle_positions, rng)
         Rⱼ₂ = get_jastrow_ratio(k, l, jastrow2)
 
         # get wavefunction ratio (correpsonding element of Green's function)
-        Rₛ = W[l, beta]        # is this the source of the bug? need to check the definition of W and 
-                            # how elements are accessed
+        Rₛ = W[l, beta]        
+                           
 
         acceptance_prob = Rⱼ₁ * Rⱼ₁ * Rⱼ₂ * Rⱼ₂ * Rₛ * Rₛ     
 
@@ -200,8 +200,8 @@ function metropolis(W, jastrow1, jastrow2, jastrow3, particle_positions, rng)
         Rⱼ₃ = get_jastrow_ratio(k, l, jastrow3)
 
         # get wavefunction ratio (correpsonding element of Green's function)
-        Rₛ = W[l, beta]        # is this the source of the bug? need to check the definition of W and 
-                            # how elements are accessed
+        Rₛ = W[l, beta]       
+                           
 
         acceptance_prob = Rⱼ₁ * Rⱼ₁ * Rⱼ₂ * Rⱼ₂ * Rⱼ₃ * Rⱼ₃ * Rₛ * Rₛ     
 
