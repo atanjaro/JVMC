@@ -22,6 +22,6 @@ TBA
 
 ## Contact
 
-For questions and comments regarding this package, please email either Andy Tanjaroon Ly at [atanjaro@vols.utk.edu](mailto:atanjaro@vols.utk.edu) or Professor Steven Johnston at [sjohn145@utk.edu](mailto:sjohn145@utk.edu).
+For questions and comments regarding this package, please email either Andy Tanjaroon Ly at [atanjaro@vols.utk.edu](mailto:atanjaro@vols.utk.edu).
 
 
