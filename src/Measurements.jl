@@ -8,8 +8,7 @@ initialize_measurement_container(model_geometry::ModelGeometry)
 Creates generic arrays for storage of associated measurment quantities. 
 
 """
-function initialize_measurement_container(model_geometry, N_burnin, N_updates)
-
+function initialize_measurement_container(model_geometry, N_burnin, N_updates, variational_parameters)
     unit_cell = model_geometry.unit_cell
     lattice = model_geometry.lattice
 
@@ -19,33 +18,35 @@ function initialize_measurement_container(model_geometry, N_burnin, N_updates)
     N_iterations = N_burnin + N_updates
 
     local_measurements = 0.0 
-    expectation = []
 
-    scalar_measurements = Dict{String, Any}([("density",zeros(AbstractFloat, norbs)),        # average density per orbital species
-                                ("double_occ",zeros(AbstractFloat, norbs)),                  # average double occupancy per orbital species
-                                ])                                                           
+    scalar_measurements = Dict{String, Any}([
+        ("density", zeros(AbstractFloat, norbs)),        # average density per orbital species
+        ("double_occ", zeros(AbstractFloat, norbs))      # average double occupancy per orbital species
+    ])                                                           
 
-    derivative_measurements = Dict{String, Any}([("Δk", (zeros(AbstractFloat, norbs),local_measurements,expectation)),        
-                                ("ΔkΔkp", (zeros(AbstractFloat, norbs),local_measurements,expectation)),
-                                ("ΔkE", (zeros(AbstractFloat, norbs),local_measurements,expectation))                  
-                                ])      
+    derivative_measurements = Dict{String, Any}([
+        ("Δk", (zeros(AbstractFloat, norbs), local_measurements, Any[])),        
+        ("ΔkΔkp", (zeros(AbstractFloat, norbs), local_measurements, Any[])),
+        ("ΔkE", (zeros(AbstractFloat, norbs), local_measurements, Any[]))                  
+    ])      
 
-    parameter_measurements = Dict{String, Any}([("parameters", expectation)])    
-    # initial parameters values
-    push!(parameter_measurements["parameters"], variational_parameters)  
-
+    parameter_measurements = Dict{String, Any}([
+        ("parameters", Any[])    
+    ])
+    # initialize parameters values
+    parameter_measurements["parameters"] = variational_parameters  
 
     correlation_measurements = Dict()
 
     measurement_container = (
-            scalar_measurements       = scalar_measurements,
-            derivative_measurements   = derivative_measurements,     
-            parameter_measurements    = parameter_measurements,     
-            correlation_measurements  = correlation_measurements,                       
-            L                         = L,
-            N                         = N,
-            norbs                     = norbs,
-            N_iterations              = N_iterations                           
+        scalar_measurements       = scalar_measurements,
+        derivative_measurements   = derivative_measurements,     
+        parameter_measurements    = parameter_measurements,     
+        correlation_measurements  = correlation_measurements,                       
+        L                         = L,
+        N                         = N,
+        norbs                     = norbs,
+        N_iterations              = N_iterations                           
     )
 
     return measurement_container
@@ -69,8 +70,6 @@ function initialize_measurements!(measurement_container, observable)
     if observable == "energy"
         # For energy, store tuple (zeros(AbstractFloat, norbs), local_measurements, expectation)
         scalar_measurements["energy"] = (zeros(AbstractFloat, norbs),local_measurements,expectation)
-        # initial energies
-        push!(scalar_measurements["energy"], ε₀) 
         # scalar_measurements["global_energy"] = local_measurements, expectation
     elseif observable == "stripe"
         # For stripe, store tuple (zeros(AbstractFloat, norbs*N), local_measurements, expectation)
@@ -106,7 +105,7 @@ function initialize_correlation_measurements!(measurement_container,  correlatio
     return nothing
 end
 
-# accumulator for measurments
+# accumulator for measurements
 # this is reflected in the key entries for each measurement dictionary
     # # through the course of the simulation, we estimate the expectation value of observable O using ⟨O⟩ ≈ N⁻¹ ∑ₓ Oₗ(x)
     # by 'local' here, I mean the argument of the sums used to obtain the expectation value
@@ -229,25 +228,28 @@ end
 
 
 """
-    measure_Δk( determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A )
+    measure_Δk!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
 
 Measures logarithmic derivatives for all variational parameters. The first 'p' are derivatives of 
 determinantal parameters and the rest are derivatives of Jastrow parameters. Measurments are then written
 to the measurement container.
 
 """
+# PASED
 function measure_Δk!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
-
+    # perform derivatives
     detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
     jpar_derivatives = get_local_jpar_derivative(jastrow,pconfig)
-    
     Δk = vcat(detpar_derivatives,jpar_derivatives)
 
+    # record current expectation values
+    local_measurement = measurement_container.derivative_measurements["Δk"][2] .+ Δk
+    current_expectation = local_measurement / measurement_container.N_iterations
+
     # write to measurement container
-    local_measurement = measurement_container.derivative_measurements["Δk"][2]
-    local_measurement = local_measurement .+ Δk
-    current_measurement = measurement_container.derivative_measurements["Δk"][2] / measurement_container.N_iterations # should it be total N_iter or current?
-    push!(measurement_container.derivative_measurements["Δk"][3], current_measurement)
+    push!(measurement_container.derivative_measurements["Δk"][3], current_expectation)
+    updated_container = (measurement_container.derivative_measurements["Δk"][1], local_measurement, measurement_container.derivative_measurements["Δk"][3])
+    measurement_container.derivative_measurements["Δk"] = updated_container
 
     return nothing
 end
@@ -260,19 +262,30 @@ Measures the product of variational derivatives with the local energy. Measurmen
 to the measurement container.
 
 """
+# PASSED
 function measure_ΔkE!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A)
+    # Test
+    jastrow = density_jastrow
 
-    Δk = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
-    E = get_local_energy(model_geometry, tight_binding_model,jastrow,pconfig)
+    # perform derivatives
+    detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
+    jpar_derivatives = get_local_jpar_derivative(jastrow,pconfig)
+    Δk = vcat(detpar_derivatives,jpar_derivatives)
 
+    # compute local energy
+    E = get_local_energy(model_geometry, tight_binding_model,jastrow,pconfig) 
+
+    # compute product of local derivatives with the local energy
     ΔkE = Δk * E
 
+    # record current expectation values
+    local_measurement = measurement_container.derivative_measurements["ΔkE"][2] .+ ΔkE
+    current_expectation = local_measurement / measurement_container.N_iterations
+
     # write to measurement container
-    local_measurement = measurement_container.derivative_measurements["ΔkE"][2]
-    local_measurement = local_measurement .+ ΔkE
-    current_measurement = measurement_container.derivative_measurements["ΔkE"][2] / measurement_container.N_iterations # should it be total N_iter or current?
-    push!(measurement_container.derivative_measurements["ΔkE"][3], current_measurement)
-     
+    push!(measurement_container.derivative_measurements["ΔkE"][3], current_expectation)
+    updated_container = (measurement_container.derivative_measurements["ΔkE"][1], local_measurement, measurement_container.derivative_measurements["ΔkE"][3])
+    measurement_container.derivative_measurements["ΔkE"] = updated_container
 
     return nothing
 end
@@ -285,17 +298,24 @@ Measures the product of variational derivatives with other variational derivativ
 to the measurement container.
 
 """
+# PASSED
 function measure_ΔkΔkp!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
+    # perform derivatives
+    detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
+    jpar_derivatives = get_local_jpar_derivative(jastrow,pconfig)
+    Δk = vcat(detpar_derivatives,jpar_derivatives)
 
-    Δk = measure_Δk(determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
-
+    # inner product of Δk and Δk′
     ΔkΔkp = Δk * Δk'
 
+    # record current expectation values
+    local_measurement = measurement_container.derivative_measurements["Δk"][2] .+ ΔkΔkp
+    current_expectation = local_measurement / measurement_container.N_iterations
+
     # write to measurement container
-    local_measurement = measurement_container.derivative_measurements["ΔkΔkp"][2]
-    local_measurement = local_measurement .+ ΔkΔkp
-    current_measurement = measurement_container.derivative_measurements["ΔkΔkp"][2] / measurement_container.N_iterations # should it be total N_iter or current?
-    push!(measurement_container.derivative_measurements["ΔkΔkp"][3], current_measurement)
+    push!(measurement_container.derivative_measurements["ΔkΔkp"][3], current_expectation)
+    updated_container = (measurement_container.derivative_measurements["ΔkΔkp"][1], local_measurement, measurement_container.derivative_measurements["ΔkΔkp"][3])
+    measurement_container.derivative_measurements["ΔkΔkp"] = updated_container
 
     return nothing
 end 
@@ -307,7 +327,10 @@ end
 Calculates the local variational energy. Returns the total local energy and writes to the measurement container.
 
 """
+# PASSED
 function get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
+    # number of sites
+    N = model_geometry.lattice.N
 
     # generate neighbor table
     nbr_table = build_neighbor_table(bonds[1],
@@ -320,9 +343,12 @@ function get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
     # particle positions
     particle_positions = get_particle_positions(pconfig)
 
-    # loop over different electrons k
     E_loc_kinetic = 0.0
+    E_loc_hubbard = 0.0
+
+    # calculate electron kinetic energy
     for β in 1:Np
+        # loop over different electrons k
         k = particle_positions[β][2] 
         # loop over nearest neighbors. TBA: loop over different neighbor orders (i.e. nearest and next nearest neighbors)
         sum_nn = 0.0
@@ -345,29 +371,41 @@ function get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
     end
 
     # calculate Hubbard energy
-    E_loc_hubb = U * number_operator(site, pconfig)[1] * (1 - number_operator(i, pconfig)[2])
+    for i in 1:N
+        E_loc_hubbard += U * number_operator(i, pconfig)[1] * (1 - number_operator(i, pconfig)[2])
+    end
+    
 
     # calculate total local energy
-    E_loc = E_loc_kinetic + E_loc_hubb
+    E_loc = E_loc_kinetic + E_loc_hubbard
 
     return E_loc
 end
 
 """
-    measure_local_energy( measurement_container, model_geometry::ModelGeometry, tight_binding_model::TightBindingModel, 
+    measure_local_energy!( measurement_container, model_geometry::ModelGeometry, tight_binding_model::TightBindingModel, 
                 jastrow::Jastrow, particle_positions:: )
 
 Measures the total local energy and writes to the measurement container.
 
 """
-function measure_local_energy(measurement_container, model_geometry, tight_binding_model, jastrow, pconfig)
+function measure_local_energy!(measurement_container, model_geometry, tight_binding_model, jastrow, pconfig)
     E_loc = get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
 
+    
+    # record current expectation values
+    local_measurement = measurement_container.scalar_measurements["energy"][2] .+ E_loc
+    current_expectation = local_measurement / measurement_container.N_iterations
+
     # write to measurement container
-    local_measurement = measurement_container.derivative_measurements["energy"][2]
-    local_measurement = local_measurement + E_loc
-    current_measurement = measurement_container.derivative_measurements["energy"][2] / measurement_container.N_iterations # should it be total N_iter or current?
-    push!(measurement_container.derivative_measurements["energy"][3], current_measurement)
+    push!(measurement_container.scalar_measurements["energy"][3], current_expectation)
+    updated_container = (measurement_container.scalar_measurements["energy"][1], local_measurement, measurement_container.scalar_measurements["energy"][3])
+    measurement_container.scalar_measurements["energy"] = updated_container
+
+    # local_measurement = measurement_container.derivative_measurements["energy"][2]
+    # local_measurement = local_measurement + E_loc
+    # current_measurement = measurement_container.derivative_measurements["energy"][2] / measurement_container.N_iterations # should it be total N_iter or current?
+    # push!(measurement_container.derivative_measurements["energy"][3], current_measurement)
 
     return nothing
 end

@@ -180,13 +180,13 @@ determinantal_parameters = initialize_determinantal_parameters(parameters_to_opt
 (H_mf, V) = build_mean_field_hamiltonian()
 
 # initialize Slater determinant state and initial particle configuration
-(D, pconfig, ε, ε₀, M, U) = build_determinantal_state()  
+(D, pconfig, ε, ε₀, M, P) = build_determinantal_state()  
 
 # initialize uncorrelated phonon state and initial particle configuration
 # (P, phconfig) = build_phonon_state()
 
 # initialize variational parameter matrices
-A = get_Ak_matrices(V, U, ε, model_geometry)
+A = get_Ak_matrices(V, P, ε, model_geometry)
 
 # initialize equal-time Green's function (W matrix)
 W = get_equal_greens(M, D)
@@ -209,7 +209,7 @@ variational_parameters = cat_vpars(determinantal_parameters, density_jastrow)
 #############################
 
 # initialize measurement container for VMC measurements
-measurement_container = initialize_measurement_container(model_geometry, N_burnin, N_updates)
+measurement_container = initialize_measurement_container(model_geometry, N_burnin, N_updates, variational_parameters)
 
 # initialize energy measurements
 initialize_measurements!(measurement_container, "energy")
@@ -228,7 +228,7 @@ t_start = time()
 # Iterate over burnin/thermalization updates.
 for n in 1:N_burnin
     # perform local updates to fermionic dofs
-    (acceptance_rate, pconfig, jastrow, W, vpars) = local_fermion_update!(model_geometry, tight_binding_model, jastrow, pconfig)        # TODO: this function is nearly done, just need to add SR updates
+    (acceptance_rate, pconfig, jastrow, W, vpars) = local_fermion_update!(model_geometry, tight_binding_model, jastrow, pconfig)       
 
     additional_info["fermionic_local_acceptance_rate"] += acceptance_rate
 

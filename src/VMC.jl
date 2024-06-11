@@ -251,7 +251,7 @@ end
 """
     local_fermion_update!()
 
-Perform a local MC update. Proposes move and accept rejects via Metropolis algorithm,
+Perform a local MC update. Proposes move and accept/rejects via Metropolis algorithm,
 if accepted, updates particle positions, T vector, W matrix, and variational parameters.
 
 """
@@ -275,7 +275,7 @@ function local_fermion_update!(model_geometry, tight_binding_model, jastrow, pco
     update_Tvec!(hop_step, density_jastrow, model_geometry)         # PASSED
 
     # update variational parameters
-    sr_update!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A, η, dt)
+    sr_update!(measurement_container, determinantal_parameters, density_jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A, η, dt)
 
     return acceptance_rate, pconfig, jastrow, W, vpars 
 end

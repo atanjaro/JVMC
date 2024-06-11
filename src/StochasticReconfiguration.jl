@@ -99,9 +99,9 @@ Update variational parameters.
 """
 function sr_update!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A, η, dt)
     # get covariance matrix
-    S = get_SR_matrix(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A )
+    S = get_sr_comatrix(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A )
     # get force vector
-    f = get_SR_forces(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A)
+    f = get_sr_forces(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A)
 
     # perform gradient descent
     δvpars = parameter_gradient(S,f,η)     

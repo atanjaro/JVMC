@@ -149,3 +149,25 @@ Add tracking (measurements) of  variational parameters
 Change log (05/23):
 Added parameter tracking to measurement container
 
+
+Change log (06/05):
+
+Upcoming changes:
+Need to debug sr_update!() method. There seems to be an issue with the measurement of the local derivatives.
+
+Change log (06/11):
+Fixed bug in initializing the measurement container, where the initial variational parameters were not initialized correctly.
+Fixed variational parameter derivative initialization in the measurement container.
+Fixed bug in measurement of local derivatives in the sr_update!() method.
+Updated the initialize_measurement_container() method to ensure seperate arrays for each measurement.
+measure_Δk!() method has been debugged and updated.
+measure_ΔkΔkp!() method has debugged and updated. 
+Changed the variable 'U' for the matrix which diagonalizes H_MF to 'P' to avoid conflict with the Hubbard 'U' (why I didn't realize this before,
+      I'm not sure)
+Updated get_local_energy() method, where the Hubbard energy could not be computed due to the aformentioned bug.
+measure_ΔkE!() method has beedn debugged and updated.
+measure_local_energy!() method has been updated.
+
+
+Upcoming changes:
+Check propagation of iterations through the course of all updates.
