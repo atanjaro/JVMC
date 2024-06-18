@@ -277,7 +277,7 @@ function local_fermion_update!(model_geometry, tight_binding_model, jastrow, pco
     # update variational parameters
     sr_update!(measurement_container, determinantal_parameters, density_jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A, η, dt)
 
-    return acceptance_rate, pconfig, jastrow, W, vpars 
+    return pconfig, jastrow, W
 end
 
 

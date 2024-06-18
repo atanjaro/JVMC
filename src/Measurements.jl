@@ -389,10 +389,11 @@ end
 Measures the total local energy and writes to the measurement container.
 
 """
+# PASSED
 function measure_local_energy!(measurement_container, model_geometry, tight_binding_model, jastrow, pconfig)
+    # calculate the current local energy
     E_loc = get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
 
-    
     # record current expectation values
     local_measurement = measurement_container.scalar_measurements["energy"][2] .+ E_loc
     current_expectation = local_measurement / measurement_container.N_iterations
@@ -401,11 +402,6 @@ function measure_local_energy!(measurement_container, model_geometry, tight_bind
     push!(measurement_container.scalar_measurements["energy"][3], current_expectation)
     updated_container = (measurement_container.scalar_measurements["energy"][1], local_measurement, measurement_container.scalar_measurements["energy"][3])
     measurement_container.scalar_measurements["energy"] = updated_container
-
-    # local_measurement = measurement_container.derivative_measurements["energy"][2]
-    # local_measurement = local_measurement + E_loc
-    # current_measurement = measurement_container.derivative_measurements["energy"][2] / measurement_container.N_iterations # should it be total N_iter or current?
-    # push!(measurement_container.derivative_measurements["energy"][3], current_measurement)
 
     return nothing
 end

@@ -228,7 +228,7 @@ t_start = time()
 # Iterate over burnin/thermalization updates.
 for n in 1:N_burnin
     # perform local updates to fermionic dofs
-    (acceptance_rate, pconfig, jastrow, W, vpars) = local_fermion_update!(model_geometry, tight_binding_model, jastrow, pconfig)       
+    (pconfig, jastrow, W) = local_fermion_update!(model_geometry, tight_binding_model, jastrow, pconfig, rng)     
 
     additional_info["fermionic_local_acceptance_rate"] += acceptance_rate
 

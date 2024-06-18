@@ -171,3 +171,15 @@ measure_local_energy!() method has been updated.
 
 Upcoming changes:
 Check propagation of iterations through the course of all updates.
+
+
+Change log (06/18):
+Fixed get_sr_forces() method, which had previous issue retrieving the local energy.
+Fixed parameter_gradient() method, which was incorrectly adding the small variaiton for stabilization. Also fixed issue with the solving of the
+      matrix equation required to get the variation of the parameters.
+      
+With these fixes, the local_fermion_update!() method is now operational!
+
+Upcoming changes:
+Need to check acceptance rates of the local fermion update
+Need to re-re-check the starting configuration of the simulations i.e. checking that we do not start on the singular configuration.

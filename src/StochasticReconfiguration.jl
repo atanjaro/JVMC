@@ -42,6 +42,7 @@ Generates the force vector f, for Stochastic Reconfiguration.
 The vector f has elements f_k = <Δ_k><H> - <Δ_kH>
 
 """
+# PASSED
 function get_sr_forces(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A )
     
     # initialize force vector
@@ -53,7 +54,7 @@ function get_sr_forces(measurement_container, determinantal_parameters, jastrow,
 
     # measure local energy E = ⟨H⟩, for this configuration
     measure_local_energy!(measurement_container, model_geometry, tight_binding_model, jastrow, pconfig)
-    E = measurement_container.derivative_measurements["energy"][3][end]      
+    E = measurement_container.scalar_measurements["energy"][3][end]      
 
     # measure product of local derivatives with energy ⟨ΔkE⟩, for this configuration
     measure_ΔkE!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A)
@@ -79,8 +80,12 @@ Reconfiguration.
 
 """
 function parameter_gradient(S, f, η)
-    # add small variation to diagonal of S for numerical stbilization
-    S += η + I
+
+    # Convert f to a vector of Float64
+    f = convert(Vector{Float64}, f)
+    
+    # add small variation to diagonal of S for numerical stabilization
+    S += η * I
 
     # solve for δα using LU decomposition
     δvpars = S \ f
