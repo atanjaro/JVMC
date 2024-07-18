@@ -259,17 +259,8 @@ for bin in 1:N_bins
 
     # Iterate over the number of updates and measurements performed in the current bin.
     for n in 1:bin_size
-        # counts number of accepted hops
-        accepted_hops = 0
-    
         # perform local update to fermionic dofs
-        (acceptance, pconfig, jastrow, W) = local_fermion_update!(model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng) 
-
-        # adds acceptance
-        accepted_hops += acceptance
-
-        # computes acceptance rate 
-        acceptance_rate = accepted_hops / N_burnin
+        (acceptance_rate, pconfig, jastrow, W) = local_fermion_update!(Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng)
 
         # record acceptance rate
         additional_info["fermionic_local_acceptance_rate"] += acceptance_rate

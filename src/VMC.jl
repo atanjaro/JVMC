@@ -263,6 +263,10 @@ if accepted, updates particle positions, T vector, W matrix, and variational par
 
 """
 function local_fermion_update!(Ne, model_geometry, tight_binding_model, jastrow, pconfig, rng)
+    if verbose
+        println("Starting new Monte Carlo cycle...")
+    end
+
     # counts number of proposed hops
     proposed_hops = 0
     # counts number of accepted hops
@@ -270,6 +274,10 @@ function local_fermion_update!(Ne, model_geometry, tight_binding_model, jastrow,
 
     # perform number of metropolis steps equal to the number of electrons
     for s in 1:Ne
+        if verbose
+            println("Metropolis step = $s")
+        end
+
         # increment number of proposed hops
         proposed_hops += 1
 
@@ -320,7 +328,7 @@ if accepted, updates particle positions, T vector, W matrix, and variational par
 """
 function local_fermion_update!(Ne, model_geometry, tight_binding_model, jastrow1, jastrow2, pconfig, rng)
     if verbose
-        println("Starting new Monte Carlo step...")
+        println("Starting new Monte Carlo cycle...")
     end
     # counts number of proposed hops
     proposed_hops = 0

@@ -199,8 +199,8 @@ Started creating multi-Jastrow factor versions of dependent functions :
       local_fermion_update!(model_geometry, tight_binding_model, jastrow1, jastrow2, pconfig, rng) - 
       get_local_energy(model_geometry, tight_binding_model, jastrow1, jastrow2, pconfig)
 Updated verbose printouts.
+Updated invertibility check method to determine whether starting configuration is singular.
 
 Upcoming changes:
 BUGFIX: There is a new bug in performing SR (sr_update!()) related to the meaasurement of (measure_Δk!()). The specific error is:
             ERROR: MethodError: no method matching +(::Float64, ::Nothing)
-

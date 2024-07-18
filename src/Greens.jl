@@ -14,6 +14,9 @@ DᵀWᵀ = Mᵀ using full pivot LU decomposition.
 
 """
 function get_equal_greens(M, D)
+    if verbose
+        println("Initializing equal-time Green's function...")
+    end
     # transpose M and D
     Dt = transpose(D)
     Mt = transpose(M)

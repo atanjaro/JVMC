@@ -29,12 +29,47 @@ Checks if given matrix is invertible by checking its rank.
 
 """
 function is_invertible(D)
-    if size(D, 1) != size(D, 2)
-        return false
+    try
+        F = lu(D)
+        # Check if there are any zeroes on the diagonal of the U matrix
+        return all(abs.(diag(F.U)) .> eps(eltype(D)))
+    catch e
+        if isa(e, SingularException)
+            return false
+        else
+            rethrow(e)
+        end
     end
-
-    return rank(D) == size(D, 1)
 end
+
+# function is_invertible_cond(A::AbstractMatrix; tol::Real = 1e12)
+#     # tol is a threshold for the condition number
+#     return cond(A) < tol
+# end
+
+# A = [1.0 2.0; 3.0 4.0]
+# B = [1.0 2.0; 2.0 4.0]
+# is_invertible_cond(A)
+# is_invertible_cond(B)
+
+# function is_invertible_lu(A::AbstractMatrix)
+#     try
+#         F = lu(A)
+#         # Check if there are any zeroes on the diagonal of the U matrix
+#         return all(abs.(diag(F.U)) .> eps(eltype(A)))
+#     catch e
+#         if isa(e, SingularException)
+#             return false
+#         else
+#             rethrow(e)
+#         end
+#     end
+# end
+
+# # Example usage
+# is_invertible_lu(A)
+# is_invertible_lu(B)
+
 
 
 """

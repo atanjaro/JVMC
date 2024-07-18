@@ -450,6 +450,9 @@ matrix of variational terms.
 
 """
 function build_mean_field_hamiltonian()
+    if verbose
+        println("Building mean-field Hamiltonian...")
+    end
     return build_tight_binding_model(tight_binding_model) + build_variational_terms(determinantal_parameters)[1], build_variational_terms(determinantal_parameters)[2]
 end
 
@@ -515,6 +518,10 @@ Returns variational parameter matrices Aₖ from the corresponding Vₖ. Compute
 
 """
 function get_Ak_matrices(V, U, ε, model_geometry)
+    if verbose
+        println("Building A matrices...")
+    end
+
     dims = model_geometry.unit_cell.n * model_geometry.lattice.N
     A = Vector{Matrix{AbstractFloat}}()
     adjU = adjoint(U)
