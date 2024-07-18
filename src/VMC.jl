@@ -61,12 +61,12 @@ function metropolis(W, jastrow, particle_positions, rng)
     # if site is unoccupied by same spin species, hop is possible
     if number_operator(l,pconfig)[beta_spin] == 1
         if verbose == true
-            println("HOP NOT POSSIBLE!")  
+            println("Hop impossible!")  
         end
         return LocalAcceptance(0, beta, beta_spin, k, l)
     else
         if verbose == true
-            println("HOP POSSIBLE!")
+            println("Hop possible!")
         end
 
         # begin Metropolis algorithm
@@ -81,16 +81,17 @@ function metropolis(W, jastrow, particle_positions, rng)
         acceptance_prob = Rⱼ * Rⱼ * Rₛ * Rₛ     
 
         if acceptance_prob > 1 || rand(rng, Uniform(0, 1), 1)[1] < acceptance_prob
-            if verbose == true
-                println("HOP ACCEPTED!")
+            if verbose 
+                println("Hop accepted!")
+                println("Rⱼ = $Rⱼ")
+                println("Rₛ = $Rₛ")
+                println("accept prob. = $acceptance_prob")
             end
-
-            # do particle hop
             
             return LocalAcceptance(1, beta, beta_spin, k, l)  # acceptance, particle number, particle spin, initial site, final site
         else
-            if verbose == true
-               println("HOP REJECTED")
+            if verbose 
+               println("Hop rejected!")
             end
 
             return LocalAcceptance(0, beta, beta_spin, k, l)
@@ -121,13 +122,13 @@ function metropolis(W, jastrow1, jastrow2, particle_positions, rng)
     # checks occupation against spin species of particle 'β'
     # if site is unoccupied by same spin species, hop is possible
     if number_operator(l,pconfig)[beta_spin] == 1
-        if verbose == true
-            println("HOP NOT POSSIBLE!")  
+        if verbose 
+            println("Hop impossible!")  
         end
         return LocalAcceptance(0, beta, beta_spin, k, l)
     else
-        if verbose == true
-            println("HOP POSSIBLE!")
+        if verbose 
+            println("Hop possible!")
         end
 
         # begin Metropolis algorithm
@@ -143,16 +144,18 @@ function metropolis(W, jastrow1, jastrow2, particle_positions, rng)
         acceptance_prob = Rⱼ₁ * Rⱼ₁ * Rⱼ₂ * Rⱼ₂ * Rₛ * Rₛ     
 
         if acceptance_prob > 1 || rand(rng, Uniform(0, 1), 1)[1] < acceptance_prob
-            if verbose == true
-                println("HOP ACCEPTED!")
+            if verbose 
+                println("Hop accepted!")
+                println("Rⱼ₁ = $Rⱼ₁")
+                println("Rⱼ₂ = $Rⱼ₂")
+                println("Rₛ = $Rₛ")
+                println("accept prob. = $acceptance_prob")
             end
 
-            # do particle hop
-            
             return LocalAcceptance(1, beta, beta_spin, k, l)  # acceptance, particle number, particle spin, initial site, final site
         else
-            if verbose == true
-               println("HOP REJECTED")
+            if verbose 
+               println("Hop rejected!")
             end
 
             return LocalAcceptance(0, beta, beta_spin, k, l)
@@ -183,13 +186,13 @@ function metropolis(W, jastrow1, jastrow2, jastrow3, particle_positions, rng)
     # checks occupation against spin species of particle 'β'
     # if site is unoccupied by same spin species, hop is possible
     if number_operator(l,pconfig)[beta_spin] == 1
-        if verbose == true
-            println("HOP NOT POSSIBLE!")  
+        if verbose
+            println("Hop impossible!")  
         end
         return LocalAcceptance(0, beta, beta_spin, k, l)
     else
-        if verbose == true
-            println("HOP POSSIBLE!")
+        if verbose
+            println("Hop possible!")
         end
 
         # begin Metropolis algorithm
@@ -206,16 +209,19 @@ function metropolis(W, jastrow1, jastrow2, jastrow3, particle_positions, rng)
         acceptance_prob = Rⱼ₁ * Rⱼ₁ * Rⱼ₂ * Rⱼ₂ * Rⱼ₃ * Rⱼ₃ * Rₛ * Rₛ     
 
         if acceptance_prob > 1 || rand(rng, Uniform(0, 1), 1)[1] < acceptance_prob
-            if verbose == true
-                println("HOP ACCEPTED!")
+            if verbose
+                println("Hop accepted!")
+                println("Rⱼ₁ = $Rⱼ₁")
+                println("Rⱼ₂ = $Rⱼ₂")
+                println("Rⱼ₃ = $Rⱼ₃")
+                println("Rₛ = $Rₛ")
+                println("accept prob. = $acceptance_prob")
             end
 
-            # do particle hop
-            
             return LocalAcceptance(1, beta, beta_spin, k, l)  # acceptance, particle number, particle spin, initial site, final site
         else
-            if verbose == true
-               println("HOP REJECTED")
+            if verbose 
+               println("Hop rejected!")
             end
 
             return LocalAcceptance(0, beta, beta_spin, k, l)
@@ -249,35 +255,122 @@ end
 
 
 """
-    local_fermion_update!()
+    local_fermion_update!(Ne::Int, model_geometry::ModelGeometry, tight_binding_model::TightBindingModel, 
+                        jastrow::Jastrow, pconfig::Vector{Int64}, rng::Xoshiro)
 
-Perform a local MC update. Proposes move and accept/rejects via Metropolis algorithm,
+Perform a local MC update. Proposes moves and accept/rejects via Metropolis algorithm,
 if accepted, updates particle positions, T vector, W matrix, and variational parameters.
 
 """
-function local_fermion_update!(model_geometry, tight_binding_model, jastrow, pconfig, rng)
+function local_fermion_update!(Ne, model_geometry, tight_binding_model, jastrow, pconfig, rng)
+    # counts number of proposed hops
+    proposed_hops = 0
+    # counts number of accepted hops
+    accepted_hops = 0
 
-    particle_positions = get_particle_positions(pconfig)    # PASSED
+    # perform number of metropolis steps equal to the number of electrons
+    for s in 1:Ne
+        # increment number of proposed hops
+        proposed_hops += 1
 
-    # accept/reject (Metropolis)
-    hop_step = metropolis(W, density_jastrow, particle_positions, rng)      # PASSED
+        # get particle positions
+        particle_positions = get_particle_positions(pconfig)    
 
-    # perform hopping
-    do_particle_hop!(hop_step, pconfig)     # PASSED
+        # accept/reject (Metropolis) step
+        hop_step = metropolis(W, jastrow, particle_positions, rng)     
 
-    # update particle positions
-    update_particle_position!(hop_step, particle_positions)         # PASSED
+        # whether hop was accepted
+        acceptance = hop_step.acceptance
 
-    # update Green's function
-    update_equal_greens!(hop_step,W)      # PASSED
+        # if hop is accepted 
+        if acceptance == 1
+            accepted_hops += 1
 
-    # update Jastrow
-    update_Tvec!(hop_step, density_jastrow, model_geometry)         # PASSED
+            # perform hop
+            do_particle_hop!(hop_step, pconfig)   
 
-    # update variational parameters
-    sr_update!(measurement_container, determinantal_parameters, density_jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A, η, dt)
+            # update particle positions
+            update_particle_position!(hop_step, particle_positions)     
 
-    return pconfig, jastrow, W
+            # update Green's function
+            update_equal_greens!(hop_step, W)   
+
+            # update Jastrow factors
+            update_Tvec!(hop_step, jastrow, model_geometry)         
+
+            # update variational parameters
+            sr_update!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A, η, dt)
+        end
+    end
+
+    # compute acceptance rate
+    acceptance_rate = accepted_hops / proposed_hops
+
+    return acceptance_rate, pconfig, jastrow, W
+end
+
+
+"""
+    local_fermion_update!(Ne::Int, model_geometry::ModelGeometry, tight_binding_model::TightBindingModel, 
+                        jastrow1::Jastrow, jastrow2::Jastrow, pconfig::Vector{Int64}, rng::Xoshiro)
+
+Perform a local MC update. Proposes moves and accept/rejects via Metropolis algorithm,
+if accepted, updates particle positions, T vector, W matrix, and variational parameters.
+
+"""
+function local_fermion_update!(Ne, model_geometry, tight_binding_model, jastrow1, jastrow2, pconfig, rng)
+    if verbose
+        println("Starting new Monte Carlo step...")
+    end
+    # counts number of proposed hops
+    proposed_hops = 0
+    # counts number of accepted hops
+    accepted_hops = 0
+
+    # perform number of metropolis steps equal to the number of electrons
+    for s in 1:Ne
+        if verbose
+            println("Metropolis step = $s")
+        end
+
+        # increment number of proposed hops
+        proposed_hops += 1
+
+        # get particle positions
+        particle_positions = get_particle_positions(pconfig)    
+
+        # accept/reject (Metropolis) step
+        hop_step = metropolis(W, jastrow1, jastrow2, particle_positions, rng)     
+
+        # whether hop was accepted
+        acceptance = hop_step.acceptance
+
+        # if hop is accepted 
+        if acceptance == 1
+            accepted_hops += 1
+
+            # perform hop
+            do_particle_hop!(hop_step, pconfig)   
+
+            # update particle positions
+            update_particle_position!(hop_step, particle_positions)     
+
+            # update Green's function
+            update_equal_greens!(hop_step, W)   
+
+            # update Jastrow factors
+            update_Tvec!(hop_step, jastrow1, model_geometry)         
+            update_Tvec!(hop_step, jastrow2, model_geometry)  
+
+            # update variational parameters
+            sr_update!(measurement_container, determinantal_parameters, jastrow1, jastrow2, model_geometry, tight_binding_model, pconfig, Np, W, A, η, dt)
+        end
+    end
+
+    # compute acceptance rate
+    acceptance_rate = accepted_hops / proposed_hops
+
+    return acceptance_rate, pconfig, jastrow1, jastrow2, W
 end
 
 

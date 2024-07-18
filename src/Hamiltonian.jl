@@ -465,12 +465,12 @@ function build_determinantal_state()
     # diagonalize Hamiltonian
     ε, U = diagonalize(H_mf) 
     if is_openshell(ε,Np) == true
-        if verbose == true
-            println("WARNING! OPEN SHELL DETECTED")
+        if verbose 
+            println("WARNING! Open shell detected")
         end
     else
-        if verbose == true
-            println("GENERATING SHELL...")
+        if verbose
+            println("Generating shell...")
         end
     end
     # store energies and M matrix

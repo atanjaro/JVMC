@@ -129,20 +129,24 @@ Tᵢ = ∑ⱼ wᵢⱼSᵢ(x) if using spin Jastrow.
 function get_Tvec(jpar_matrix, jastrow_type)
     Tvec = Vector{AbstractFloat}(undef, model_geometry.lattice.N)
     for i in 1:model_geometry.lattice.N
-        if jastrow_type == "density"
+        if jastrow_type == "e-den-den"
             if pht == true
                 Tvec[i] = sum(jpar_matrix[i,:]) * (number_operator(i,pconfig)[1] - number_operator(i,pconfig)[2])  
             else
                 Tvec[i] = sum(jpar_matrix[i,:]) * (number_operator(i,pconfig)[1] + number_operator(i,pconfig)[2])  
             end
-        elseif jastrow_type == "spin"
+        elseif jastrow_type == "e-spn-spn"
             if pht == true
                 Tvec[i] = sum(jpar_matrix[i,:]) * 0.5 * (number_operator(i,pconfig)[1] + number_operator(i,pconfig)[2])
             else
                 Tvec[i] = sum(jpar_matrix[i,:]) * 0.5 * (number_operator(i,pconfig)[1] - number_operator(i,pconfig)[2])
             end
-        elseif jastrow_type == "electron-phonon"
+        elseif jastrow_type == "eph-den-den"
             # populate electron-phonon T vector
+        elseif jastrow_type == "ph-dsp-dsp"
+            # populate
+        elseif jastrow_type == "eph-den-dsp"
+            # populate
         end
     end
 
@@ -211,15 +215,15 @@ function build_jastrow_factor(jastrow_type)
     return Jastrow(jastrow_type, jpar_matrix, init_Tvec, jpar_map, num_jpars)
 end
 
-"""
-    update_jparams!()
+# """
+#     update_jparams!()
 
-Updates the table of Jastrow parameters. 
-"""
-function update_jparams!(jastrow)
+# Updates the table of Jastrow parameters. 
+# """
+# function update_jparams!(jastrow)
 
 
-end
+# end
 
 
 """

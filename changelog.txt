@@ -177,9 +177,30 @@ Change log (06/18):
 Fixed get_sr_forces() method, which had previous issue retrieving the local energy.
 Fixed parameter_gradient() method, which was incorrectly adding the small variaiton for stabilization. Also fixed issue with the solving of the
       matrix equation required to get the variation of the parameters.
-      
+
 With these fixes, the local_fermion_update!() method is now operational!
 
 Upcoming changes:
 Need to check acceptance rates of the local fermion update
 Need to re-re-check the starting configuration of the simulations i.e. checking that we do not start on the singular configuration.
+Need to check numerical stabilization routines.
+Need to implement binning!
+Need to add write_measurments!() method
+
+Change log (07/18):
+Updated Jastrow keys and methods to include electron-phonon density-displacement and phonon density-density Jastrow factors:
+      "e-den-den"   - electron density-density 
+      "e-spn-spn"   - electron spin-spin
+      "ph-dsp-dsp"  - phonon displacement-displacement
+      "eph-den-den" - electron-phonon density-density
+      "eph-den-dsp" - electron-phonon density-displacement.
+Updated local_fermion_update!() to return acceptance rate and fixed number of moves per update.
+Started creating multi-Jastrow factor versions of dependent functions :
+      local_fermion_update!(model_geometry, tight_binding_model, jastrow1, jastrow2, pconfig, rng) - 
+      get_local_energy(model_geometry, tight_binding_model, jastrow1, jastrow2, pconfig)
+Updated verbose printouts.
+
+Upcoming changes:
+BUGFIX: There is a new bug in performing SR (sr_update!()) related to the meaasurement of (measure_Δk!()). The specific error is:
+            ERROR: MethodError: no method matching +(::Float64, ::Nothing)
+

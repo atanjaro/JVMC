@@ -83,7 +83,7 @@ function parameter_gradient(S, f, η)
 
     # Convert f to a vector of Float64
     f = convert(Vector{Float64}, f)
-    
+
     # add small variation to diagonal of S for numerical stabilization
     S += η * I
 
@@ -114,8 +114,8 @@ function sr_update!(measurement_container, determinantal_parameters, jastrow, mo
     # update parameters
     vpars = cat_vpars(determinantal_parameters, jastrow)
     vpars += dt * δvpars
-    # TODO: back propagate to known quantities i.e. determinantal_parameters and jastrow?
-    # start with a large dt and reduce as energy is minimized
+
+    # TODO: start with a large dt and reduce as energy is minimized
 
     return nothing
 end

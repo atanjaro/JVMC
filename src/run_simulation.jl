@@ -191,17 +191,23 @@ A = get_Ak_matrices(V, P, ε, model_geometry)
 # initialize equal-time Green's function (W matrix)
 W = get_equal_greens(M, D)
 
-# construct density Jastrow factor
-density_jastrow = build_jastrow_factor("density")
+# construct electron density-density Jastrow factor
+e_den_den_jastrow = build_jastrow_factor("e-den-den")
 
-# construct spin Jastrow factor 
-# spin_jastrow = build_jastrow_factor("spin")
+# construct electron spin-spin Jastrow factor 
+# e_spn_spn_jastrow = build_jastrow_factor("e-spn-spn")
 
-# construct electron-phonon density Jastrow factor 
-# eph_jastrow = build_jastrow_factor("electron-phonon")
+# construct electron-phonon density-density Jastrow factor 
+# eph_den_den_jastrow = build_jastrow_factor("eph-den-den")
+
+# construct electron-phonon density-displacement Jastrow factor
+# eph_den_dsp_jastrow = build_jastrow_factor("eph-den-dsp")
+
+# construct phonon displacement-displacement Jastrow factor
+# ph_dps_dsp_jastrow = build_jastrow_factor("eph-dsp-dsp")
 
 # initialize variational parameters
-variational_parameters = cat_vpars(determinantal_parameters, density_jastrow)
+variational_parameters = cat_vpars(determinantal_parameters, e_den_den_jastrow)
 
 
 #############################
@@ -227,9 +233,10 @@ t_start = time()
 
 # Iterate over burnin/thermalization updates.
 for n in 1:N_burnin
-    # perform local updates to fermionic dofs
-    (pconfig, jastrow, W) = local_fermion_update!(model_geometry, tight_binding_model, jastrow, pconfig, rng)     
+    # perform local update to fermionic dofs
+    (acceptance_rate, pconfig, jastrow, W) = local_fermion_update!(Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng)
 
+    # record acceptance rate
     additional_info["fermionic_local_acceptance_rate"] += acceptance_rate
 
     # perform local updates to phonon dofs
@@ -252,9 +259,19 @@ for bin in 1:N_bins
 
     # Iterate over the number of updates and measurements performed in the current bin.
     for n in 1:bin_size
-        # perform local updates to fermionic dofs
-        (acceptance_rate, pconfig, jastrow, W, vpars) = local_fermion_update!(model_geometry, tight_binding_model, jastrow, pconfig)
+        # counts number of accepted hops
+        accepted_hops = 0
+    
+        # perform local update to fermionic dofs
+        (acceptance, pconfig, jastrow, W) = local_fermion_update!(model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng) 
 
+        # adds acceptance
+        accepted_hops += acceptance
+
+        # computes acceptance rate 
+        acceptance_rate = accepted_hops / N_burnin
+
+        # record acceptance rate
         additional_info["fermionic_local_acceptance_rate"] += acceptance_rate
 
         # perform local updates to phonon dofs

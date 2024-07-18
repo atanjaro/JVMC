@@ -94,9 +94,9 @@ function initialize_correlation_measurements!(measurement_container,  correlatio
 
     (; correlation_measurements) = measurement_container
 
-    if correlation == "density"
+    if correlation == "den-den"
         # scalar_measurements["density-density correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,expectation = [])
-    elseif correlation == "spin"
+    elseif correlation == "spn-spn"
         # scalar_measurements["spin-spin correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,expectation = [])
     elseif correlation == "pair"
         # scalar_measurements["pair correlation"] = (zeros(AbstractFloat, norbs),local_measurements = 0.0,expectation = [])
@@ -235,7 +235,7 @@ determinantal parameters and the rest are derivatives of Jastrow parameters. Mea
 to the measurement container.
 
 """
-# PASED
+# PASSED
 function measure_Δk!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
     # perform derivatives
     detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
@@ -243,7 +243,7 @@ function measure_Δk!(measurement_container, determinantal_parameters, jastrow, 
     Δk = vcat(detpar_derivatives,jpar_derivatives)
 
     # record current expectation values
-    local_measurement = measurement_container.derivative_measurements["Δk"][2] .+ Δk
+    local_measurement = measurement_container.derivative_measurements["Δk"][2] .+ Δk    # BUG
     current_expectation = local_measurement / measurement_container.N_iterations
 
     # write to measurement container
@@ -264,9 +264,6 @@ to the measurement container.
 """
 # PASSED
 function measure_ΔkE!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A)
-    # Test
-    jastrow = density_jastrow
-
     # perform derivatives
     detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
     jpar_derivatives = get_local_jpar_derivative(jastrow,pconfig)
@@ -381,6 +378,138 @@ function get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
 
     return E_loc
 end
+
+
+"""
+    get_local_energy(model_geometry::ModelGeometry, tight_binding_model::TightBindingModel, 
+                    jastrow1::Jastrow, jastrow2::Jastrow, particle_positions:: )
+
+Calculates the local variational energy. Returns the total local energy and writes to the measurement container.
+
+"""
+function get_local_energy(model_geometry, tight_binding_model, jastrow1, jastrow2, pconfig)
+    # number of sites
+    N = model_geometry.lattice.N
+
+    # generate neighbor table
+    nbr_table = build_neighbor_table(bonds[1],
+                                    model_geometry.unit_cell,
+                                    model_geometry.lattice)
+
+    # gnerate neighbor map
+    nbr_map = map_neighbor_table(nbr_table)
+
+    # particle positions
+    particle_positions = get_particle_positions(pconfig)
+
+    E_loc_kinetic = 0.0
+    E_loc_hubbard = 0.0
+
+    # calculate electron kinetic energy
+    for β in 1:Np
+        # loop over different electrons k
+        k = particle_positions[β][2] 
+        # loop over nearest neighbors. TBA: loop over different neighbor orders (i.e. nearest and next nearest neighbors)
+        sum_nn = 0.0
+        for l in nbr_map[k][2]
+            # reverse sign if system is particle-hole transformed
+            if pht == true
+                Rⱼ₁ = exp(-get_jastrow_ratio(l, k, jastrow1))
+                Rⱼ₂ = exp(-get_jastrow_ratio(l, k, jastrow2))
+            else
+                Rⱼ₁ = exp(get_jastrow_ratio(l, k, jastrow1))
+                Rⱼ₂ = exp(get_jastrow_ratio(l, k, jastrow2))
+            end
+            sum_nn += Rⱼ₁ * Rⱼ₂ * W[l, β]
+        end
+
+        # reverse sign if system is particle-hole transformed
+        if pht == true
+            E_loc_kinetic += tight_binding_model.t[1] * sum_nn          
+        else
+            E_loc_kinetic += - tight_binding_model.t[1] * sum_nn
+        end
+    end
+
+    # calculate Hubbard energy
+    for i in 1:N
+        E_loc_hubbard += U * number_operator(i, pconfig)[1] * (1 - number_operator(i, pconfig)[2])
+    end
+    
+
+    # calculate total local energy
+    E_loc = E_loc_kinetic + E_loc_hubbard
+
+    return E_loc
+end
+
+
+"""
+    get_local_energy(model_geometry::ModelGeometry, tight_binding_model::TightBindingModel, 
+                    jastrow1::Jastrow, jastrow2::Jastrow, particle_positions:: )
+
+Calculates the local variational energy. Returns the total local energy and writes to the measurement container.
+
+"""
+function get_local_energy(model_geometry, tight_binding_model, jastrow1, jastrow2, jastrow3, pconfig)
+    # number of sites
+    N = model_geometry.lattice.N
+
+    # generate neighbor table
+    nbr_table = build_neighbor_table(bonds[1],
+                                    model_geometry.unit_cell,
+                                    model_geometry.lattice)
+
+    # gnerate neighbor map
+    nbr_map = map_neighbor_table(nbr_table)
+
+    # particle positions
+    particle_positions = get_particle_positions(pconfig)
+
+    E_loc_kinetic = 0.0
+    E_loc_hubbard = 0.0
+
+    # calculate electron kinetic energy
+    for β in 1:Np
+        # loop over different electrons k
+        k = particle_positions[β][2] 
+        # loop over nearest neighbors. TBA: loop over different neighbor orders (i.e. nearest and next nearest neighbors)
+        sum_nn = 0.0
+        for l in nbr_map[k][2]
+            # reverse sign if system is particle-hole transformed
+            if pht == true
+                Rⱼ₁ = exp(-get_jastrow_ratio(l, k, jastrow1))
+                Rⱼ₂ = exp(-get_jastrow_ratio(l, k, jastrow2))
+                Rⱼ₃ = exp(-get_jastrow_ratio(l, k, jastrow3))
+            else
+                Rⱼ₁ = exp(get_jastrow_ratio(l, k, jastrow1))
+                Rⱼ₂ = exp(get_jastrow_ratio(l, k, jastrow2))
+                Rⱼ₃ = exp(get_jastrow_ratio(l, k, jastrow3))
+            end
+            sum_nn += Rⱼ₁ * Rⱼ₂ * Rⱼ₃ * W[l, β]
+        end
+
+        # reverse sign if system is particle-hole transformed
+        if pht == true
+            E_loc_kinetic += tight_binding_model.t[1] * sum_nn          
+        else
+            E_loc_kinetic += - tight_binding_model.t[1] * sum_nn
+        end
+    end
+
+    # calculate Hubbard energy
+    for i in 1:N
+        E_loc_hubbard += U * number_operator(i, pconfig)[1] * (1 - number_operator(i, pconfig)[2])
+    end
+    
+
+    # calculate total local energy
+    E_loc = E_loc_kinetic + E_loc_hubbard
+
+    return E_loc
+end
+
+
 
 """
     measure_local_energy!( measurement_container, model_geometry::ModelGeometry, tight_binding_model::TightBindingModel, 
