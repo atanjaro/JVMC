@@ -15,7 +15,7 @@ DᵀWᵀ = Mᵀ using full pivot LU decomposition.
 """
 function get_equal_greens(M, D)
     if verbose
-        println("Initializing equal-time Green's function...")
+        println("Getting equal-time Green's function...")
     end
     # transpose M and D
     Dt = transpose(D)
@@ -32,10 +32,12 @@ function get_equal_greens(M, D)
 
     # Update the entries of the W matrix
     W = transpose(Wt)
+
+    if debug
+        println("W = $W")
+    end
  
     return W                
-
-    # return M * inv(D)       # Testing purposes only
 end                         
 
 
@@ -72,7 +74,9 @@ Wᵣ replaces the updated Green's function Wᵤ.
 """
 function recalc_equal_greens(Wᵤ, δW, model_geometry)
     L = model_geometry.lattice.N
+    # recalculated Green's function from scratch
     Wᵣ = get_equal_greens(M, D)
+    # difference in updated Green's function and recalculated Green's function
     diff = Wᵤ-Wᵣ
 
     diff_sum = 0.0
@@ -95,7 +99,7 @@ function recalc_equal_greens(Wᵤ, δW, model_geometry)
 
     else # ΔW < δW
         if verbose == true
-            println("Green's function is stable: ΔW = ", ΔW, " > δW = ", δW)
+            println("Green's function is stable: ΔW = ", ΔW, " < δW = ", δW)
         end
         return Wᵤ, ΔW
     end  

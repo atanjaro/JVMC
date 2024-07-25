@@ -20,8 +20,8 @@ include("Measurements.jl")
 #############################
 
 # define the size of the lattice
-Lx = 2
-Ly = 2
+Lx = 4
+Ly = 4
 
 # define initial electron density
 n̄ = 1.0
@@ -39,44 +39,54 @@ tp = 0.0
 # Hubbard-U
 U = 0.5
 
-# onsite energy
-# ε = 0.0
+# (BCS) chemical potential
+μ_BCS = 3.0
 
-# chemical potential
-μ = 3.0
-
-# fugacity
+# phonon fugacity
 # μₚₕ = 0.0
 
-# read in initial variational parameter set
-readin_vpars = false
+#######################################
+##      VARIATIONAL PARAMETERS       ##
+#######################################
+
+# TBD: how this will be done is a file will be generated with the headers 
+#      being the parameter name followed by values. For non-uniform parameters,
+#      it's indices will also be reported. 
+
+# whether to read-in initial determinantal parameters
+readin_detpars = false
+
+# whether to read-in initial Jastrow parameters
+readin_jpars = false    
+
+# filepath
 path_to_vpars = "/path/to/variational/parameters/"
 
-######################################
-##      VARIATIONAL PARAMTERS       ##
-######################################
-# μ: chemical potential
-# μₚₕ: fugacity
-# Δs: s-wave pairing
-# Δd: d-wave pairing (TBA)
-# Δa: antiferromagnetic (Neél) order
-# Δc: uniform charge order
-# Δcs: charge stripe (TBA)
-# Δss: spin stripe  (TBA)
+# parameters to be optimized and initial value
+parameters_to_optimize = ["Δs", "μ_BCS"]        # BCS wavefunction
+parameter_values = [0.3, μ_BCS]                 # pht = true
 
-# Δd + Δa: uniform d-wave
-# Δcm + Δsm: stripe order
+# parameters to be optimized and initial value
+# parameters_to_optimize = ["Δcs", "Δss"]       # stripe wavefunction
+# parameter_values = [0.3, 0.3]                 # pht = false
 
-# parameters to be optimized
-parameters_to_optimize = ["Δs", "μ"]
-parameter_values = [0.3, μ]
+# parameters to be optimized and initial value
+# parameters_to_optimize = ["Δd", "Δa"]         # uniform d-wave wavefunction
+# parameter_values = [0.3, 0.3]                 # pht = true
 
+# parameters to be optimized and initial value
+# parameters_to_optimize = ["Δa"]               # AFM (Neél) wavefunction
+# parameter_values = [0.3]                      # pht = false
+
+# parameters to be optimized and initial value
+# parameters_to_optimize = ["Δc"]               # CDW wavefunction
+# parameter_values = [0.3]                      # pht = false
 
 ##################################
 ## DEFINE SIMULATION PARAMETERS ##
 ##################################
 
-# whether model is particle-hole transformed (if so, automatically GCE)
+# whether model is particle-hole transformed 
 pht = true
        
 # initialize random seed
@@ -113,6 +123,9 @@ dt = 0.1        # dt must be of sufficient size such that convergence is rapid a
 
 # whether to output to terminal during runtime
 verbose = true
+
+# debugging (this will be removed later)
+debug = true
 
 # whether to output matrices to file
 write = false
@@ -161,7 +174,7 @@ bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
 model_geometry = ModelGeometry(unit_cell,lattice, bonds)
 
 # define non-interacting tight binding model
-tight_binding_model = TightBindingModel([t,tp],μ)
+tight_binding_model = TightBindingModel([t,tp],μ_BCS)
 
 # initialize determinantal parameters
 determinantal_parameters = initialize_determinantal_parameters(parameters_to_optimize, parameter_values)
@@ -230,6 +243,9 @@ initialize_measurements!(measurement_container, "energy")
 
 # start time for simulation
 t_start = time()
+if verbose
+    println("|| START OF VMC SIMULATION ||")
+end
 
 # Iterate over burnin/thermalization updates.
 for n in 1:N_burnin
@@ -237,7 +253,7 @@ for n in 1:N_burnin
     (acceptance_rate, pconfig, jastrow, W) = local_fermion_update!(Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng)
 
     # record acceptance rate
-    additional_info["fermionic_local_acceptance_rate"] += acceptance_rate
+    # additional_info["fermionic_local_acceptance_rate"] += acceptance_rate
 
     # perform local updates to phonon dofs
     # local_phonon_update!(model_geometry, electron_phonon_model, jastrow, phconfig)
@@ -246,7 +262,8 @@ for n in 1:N_burnin
 end
 
 # recompute W and Tvec(s) for numerical stabilization
-(W, ΔW) = recalc_equal_greens(Wᵤ, δW, model_geometry)
+# TODO: this may be moved within the updating scheme
+(W, ΔW) = recalc_equal_greens(W, δW)
 # recalc_Tvec(Tᵤ, δT, model_geometry)       # TODO: need to update recalc_Tvec() method
 
 
@@ -284,6 +301,9 @@ end
 
 # end time for simulation
 t_end = time()
+if verbose
+    println("|| END OF VMC SIMULATION ||")
+end
 
 # record simulation runtime
 additional_info["time"] += t_end - t_start

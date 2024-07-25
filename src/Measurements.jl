@@ -123,6 +123,8 @@ a vector of derivatives.
 
 """
 function get_local_jpar_derivative(jastrow, pconfig)
+    # jastrow type
+    jastrow_type = jastrow.jastrow_type
 
     # number of Jastrow parameters
     num_jpars = jastrow.num_jpars
@@ -134,8 +136,8 @@ function get_local_jpar_derivative(jastrow, pconfig)
     derivatives = zeros(AbstractFloat, num_jpars)
                 
     # for density Jastrow
-    if jastrow.jastrow_type == "density"
-        for num in 1:jastrow.num_jpars
+    if jastrow_type == "e-den-den"
+        for num in 1:num_jpars
             for (i, r1) in jpar_map
                 for (j, r2) in jpar_map
                     if r1[1] == r2[1]
@@ -156,8 +158,8 @@ function get_local_jpar_derivative(jastrow, pconfig)
         return derivatives
 
     # for spin Jastrow
-    elseif jastrow.jastrow_type == "spin"   
-        for num in 1:jastrow.num_jpars
+    elseif jastrow_type == "e-spin-spin"   
+        for num in 1:num_jpars
             for (i, r1) in jpar_map
                 for (j, r2) in jpar_map
                     if r1[1] == r2[1]
@@ -177,7 +179,7 @@ function get_local_jpar_derivative(jastrow, pconfig)
         return derivatives
 
     # for electron-phonon Jastrow
-    elseif jastrow.jastrow_type == "electron-phonon"   
+    elseif jastrow_type == "eph-den-den"   
         return derivatives
     else
     end
@@ -237,13 +239,14 @@ to the measurement container.
 """
 # PASSED
 function measure_Δk!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
+    jastrow = e_den_den_jastrow
     # perform derivatives
     detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
     jpar_derivatives = get_local_jpar_derivative(jastrow,pconfig)
     Δk = vcat(detpar_derivatives,jpar_derivatives)
 
     # record current expectation values
-    local_measurement = measurement_container.derivative_measurements["Δk"][2] .+ Δk    # BUG
+    local_measurement = measurement_container.derivative_measurements["Δk"][2] .+ Δk   
     current_expectation = local_measurement / measurement_container.N_iterations
 
     # write to measurement container
@@ -345,8 +348,15 @@ function get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
 
     # calculate electron kinetic energy
     for β in 1:Np
-        # loop over different electrons k
-        k = particle_positions[β][2] 
+        # if β > length(particle_positions)
+        #     error("Index β ($β) is out of bounds for particle_positions of length $(length(particle_positions))")
+        # end
+        # if length(particle_positions[β]) < 2
+        #     error("particle_positions[β] does not have at least 2 elements: ", particle_positions[β])
+        # end
+        k = particle_positions[β][2]
+        # println("β: ", β, ", k: ", k)
+
         # loop over nearest neighbors. TBA: loop over different neighbor orders (i.e. nearest and next nearest neighbors)
         sum_nn = 0.0
         for l in nbr_map[k][2]

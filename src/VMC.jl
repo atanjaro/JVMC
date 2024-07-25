@@ -262,7 +262,7 @@ Perform a local MC update. Proposes moves and accept/rejects via Metropolis algo
 if accepted, updates particle positions, T vector, W matrix, and variational parameters.
 
 """
-function local_fermion_update!(Ne, model_geometry, tight_binding_model, jastrow, pconfig, rng)
+function local_fermion_update!(Np, model_geometry, tight_binding_model, jastrow, pconfig, rng)
     if verbose
         println("Starting new Monte Carlo cycle...")
     end
@@ -272,8 +272,8 @@ function local_fermion_update!(Ne, model_geometry, tight_binding_model, jastrow,
     # counts number of accepted hops
     accepted_hops = 0
 
-    # perform number of metropolis steps equal to the number of electrons
-    for s in 1:Ne
+    # perform number of metropolis steps equal to the number of particles
+    for s in 1:Np
         if verbose
             println("Metropolis step = $s")
         end
@@ -294,11 +294,11 @@ function local_fermion_update!(Ne, model_geometry, tight_binding_model, jastrow,
         if acceptance == 1
             accepted_hops += 1
 
-            # perform hop
-            do_particle_hop!(hop_step, pconfig)   
+            # perform hop   
+            do_particle_hop!(hop_step, pconfig)                         # possible source of bug
 
             # update particle positions
-            update_particle_position!(hop_step, particle_positions)     
+            update_particle_position!(hop_step, particle_positions)     # possible source of bug?
 
             # update Green's function
             update_equal_greens!(hop_step, W)   
@@ -312,7 +312,7 @@ function local_fermion_update!(Ne, model_geometry, tight_binding_model, jastrow,
     end
 
     # compute acceptance rate
-    acceptance_rate = accepted_hops / proposed_hops
+    acceptance_rate = accepted_hops / proposed_hops     
 
     return acceptance_rate, pconfig, jastrow, W
 end
@@ -348,7 +348,7 @@ function local_fermion_update!(Ne, model_geometry, tight_binding_model, jastrow1
         particle_positions = get_particle_positions(pconfig)    
 
         # accept/reject (Metropolis) step
-        hop_step = metropolis(W, jastrow1, jastrow2, particle_positions, rng)     
+        hop_step = metropolis(W, jastrow1, jastrow2, particle_positions, rng)     # TODO: test whether configuration is reverted after proposal
 
         # whether hop was accepted
         acceptance = hop_step.acceptance

@@ -9,25 +9,43 @@ spin-up and spin-down electrons for lattice with N sites.
 
 """
 function get_particle_numbers(density)
-    # @assert ce = true
     Ne = density * model_geometry.lattice.N
-    @assert Ne % 2 == 0
-    if pht == true
-        # number of up, down electrons
-        nup  = Ne / 2
-        ndn = Ne - nup
-        # total number of particles (electrons and holes)
-        Np = nup + model_geometry.lattice.N - ndn
-    else
-        # number of up, down electrons
-        nup = Ne / 2
-        ndn = Ne / 2
-        # total number of particles
+    @assert Ne % 2 == 0 "Ne must be even"
+    
+    nup = Ne ÷ 2
+    ndn = Ne ÷ 2
+    
+    if !pht
         Np = Ne
-        @assert Np % 2 == 0
+        @assert Np % 2 == 0 "Np must be even"
+    else
+        Np = nup + model_geometry.lattice.N - ndn
     end
-    return trunc(Int,Np), trunc(Int,Ne), trunc(Int,nup), trunc(Int,ndn)
+    
+    return Int(Np), Int(Ne), Int(nup), Int(ndn)
 end
+
+# function get_particle_numbers(density)
+#     # @assert ce = true
+#     Ne = density * model_geometry.lattice.N
+#     @assert Ne % 2 == 0
+#     if pht == true
+#         # number of up, down electrons
+#         nup  = Ne / 2
+#         ndn = Ne - nup
+#         # total number of particles (electrons and holes)
+#         Np = nup + model_geometry.lattice.N - ndn
+#     else
+#         # number of up, down electrons
+#         nup = Ne / 2
+#         ndn = Ne / 2
+#         # total number of particles
+#         Np = Ne
+#         @assert Np % 2 == 0
+#     end
+#     return trunc(Int,Np), trunc(Int,Ne), trunc(Int,nup), trunc(Int,ndn)
+# end
+
 
 
 """
@@ -39,11 +57,20 @@ on a lattice with N sites, as well as total particle number and total number of 
 """
 function get_particle_density(nup, ndn)
     Ne = nup + ndn
-    @assert Ne % 2 == 0
+    @assert Ne % 2 == 0 "Ne must be even"
+    
     Np = nup + model_geometry.lattice.N - ndn
     density = Ne / model_geometry.lattice.N
-    return density, Np, Ne  
+    
+    return density, Int(Np), Int(Ne)
 end
+# function get_particle_density(nup, ndn)
+#     Ne = nup + ndn
+#     @assert Ne % 2 == 0
+#     Np = nup + model_geometry.lattice.N - ndn
+#     density = Ne / model_geometry.lattice.N
+#     return density, Np, Ne  
+# end
 
 
 """
@@ -217,114 +244,3 @@ end
 
 
 
-#################################################### FUNCTION GRAVEYARD #########################################################
-
-# "CREATION/DESTRUCTION OPERATORS"
-# # TODO: 'site' actually refers to the 'spindex' here. Need to fix that...
-
-# """
-
-#     create_boson( site::Int, state::Matrix{Int} )
-
-# Creates a boson on some lattice site.
-
-# """
-# function create_boson(site, state)
-#     amp = sqrt(state[site] + 1)
-#     state[site] += 1
-
-#     return amp * state
-# end
-
-# """
-
-#     destroy_boson( site::Int, state::Matrix{Int} )
-
-# Annihilates a boson on some lattice site.
-
-# """
-# function destroy_boson(site, state)
-#     if state[site] == 0
-#         print("vacuum state!!")
-
-#         return 0
-#     else
-#         amp = sqrt(state[site] - 1)
-#         state[site] -= 1
-
-#         return amp * state
-#     end
-# end
-
-
-
-# """
-
-#     create_fermion( site::Int, state::Matrix{Int}, PHT::Bool )
-
-# Creates a fermion on some lattice site. If PHT is 'true', creates a spin down hole.
-
-# """
-# # if PHT == true, creates a spin-down hole at some site
-# function create_fermion(site, state, PHT)
-#     if PHT == true
-#         if state[site] == 0
-#             print("state occupied!!")
-
-#             return 0
-#         else
-#             amp = state[site]
-#             sgn = (-1)^(sum(state[1:site]))
-#             state[site] -=1
-
-#             return sgn * amp * state
-#         end
-#     else
-#         if state[site] == 1
-#             print("state occupied!!")
-    
-#             return 0
-#         else
-#             amp = 1 - state[state]
-#             sgn = (-1)^(sum(state[1:site]))
-#             state[site] += 1
-    
-#             return sgn * amp * state
-#         end
-#     end
-# end
-
-# """
-
-#     destroy_fermion( site::Int, state::Matrix{Int}, PHT::Bool )
-
-# Annihilates a fermion on some lattice site. If PHT is 'true', annihilates a spin down hole.
-
-# """
-# function destroy_fermion(site, state, PHT)
-#     if PHT == true
-#         if state[site] == 1
-#             print("vacuum state!!")
-
-#             return 0
-#         else
-#             amp = 1 - state[state]
-#             sgn = (-1)^(sum(state[1:site]))
-#             state[site] += 1
-
-#             return sgn * amp * state
-#         end
-#     else
-#         if state[site] == 0
-#             print("vacuum state!!")
-    
-#             return 0
-#         else
-#             amp = state[site]
-#             sgn = (-1)^(sum(state[1:site]))
-#             state[site] -=1
-    
-#             return sgn * amp * state
-#         end
-#     end
-# end

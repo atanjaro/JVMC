@@ -204,3 +204,32 @@ Updated invertibility check method to determine whether starting configuration i
 Upcoming changes:
 BUGFIX: There is a new bug in performing SR (sr_update!()) related to the meaasurement of (measure_Δk!()). The specific error is:
             ERROR: MethodError: no method matching +(::Float64, ::Nothing)
+Need to check cases where all updates are rejected?
+
+
+Change log (07/19):
+Fixed bug in get_local_jpar_derivative() where the Jastrow keys had not yet been updated.
+Updated 'μ' to 'μ_BCS'.
+Added ability to specify charge and spin stripe initial states.
+
+Upcoming changes:
+Need to check acceptance rates. 
+
+
+Change log (07/22):
+Re-organized the structure of run_simulation.jl, which now has examples of different wavefunctions.
+
+Upcoming changes:
+BUG: During some simulation runtimes, a particle is mysteriously removed from 'pconfig', causing a reduction 
+     in size of 'particle_positions', creating a bounds error. Must figure out why this 'leak' is occuring.
+
+Change log (07/24):
+Streamlined get_particle_numbers() and get_particle_density() functions.
+
+Upcoming changes:
+BUG: During some simulation runtimes, a particle is mysteriously removed from 'pconfig', causing a reduction 
+     in size of 'particle_positions', creating a bounds error. Must figure out why this 'leak' is occuring. This only affects
+     simulations randomly
+BUG: parameter values are NOT being updated during the Monte Carlo cycles.
+
+
