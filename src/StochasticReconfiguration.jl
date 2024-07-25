@@ -1,5 +1,3 @@
-# module StochasticReconfiguration
-
 using LinearAlgebra
 
 """

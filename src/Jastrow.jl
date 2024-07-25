@@ -1,13 +1,7 @@
-# module Jastrow
-
 using LatticeUtilities
 using LinearAlgebra
 using DelimitedFiles
 using Distances
-
-# export build_jastrow_factor
-# export get_Tvec
-# export update_Tvec
 
 struct Jastrow
     # type of Jastrow parameter

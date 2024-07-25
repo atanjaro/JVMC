@@ -1,10 +1,5 @@
-# module Greens
-
 using LinearAlgebra
 
-# export get_equal_greens
-# export update_equal_gree
-# export recalc_equal_greens
 
 """
     get_equal_greens(M::Matrix{AbstractFloat}, D::Matrix{AbstractFloat}) 
@@ -104,6 +99,3 @@ function recalc_equal_greens(Wᵤ, δW, model_geometry)
         return Wᵤ, ΔW
     end  
 end
-
-
-# end # of module

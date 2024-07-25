@@ -1,5 +1,3 @@
-# module Hamiltonian
-
 using LatticeUtilities
 using LinearAlgebra
 using Test
@@ -620,8 +618,6 @@ function get_Ak_matrices(V, U, ε, model_geometry)
 
     return A
 end
-
-# end # of module
 
 
 
