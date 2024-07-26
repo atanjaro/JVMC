@@ -67,7 +67,7 @@ function metropolis(W, jastrow, particle_positions, rng)
     l = k_nbrs[nbr_rand]          
 
     # spin of particle particle 'β' 
-    beta_spin = get_spindex_type(particle_positions[beta][1])
+    beta_spin = get_spindex_type(particle_positions[beta][1],model_geometry)
     
     # checks occupation against spin species of particle 'β'
     # if site is unoccupied by same spin species, hop is possible
@@ -140,20 +140,20 @@ function local_fermion_update!(Np, model_geometry, tight_binding_model, jastrow,
         proposed_hops += 1
 
         # get particle positions
-        particle_positions = get_particle_positions(pconfig)    
+        particle_positions = get_particle_positions(pconfig, model_geometry)    
 
         # accept/reject (Metropolis) step
-        hop_step = metropolis(W, jastrow, particle_positions, rng)    
+        met_step = metropolis(W, jastrow, particle_positions, rng)    
 
         # whether hop was accepted
-        acceptance = hop_step.acceptance
+        acceptance = met_step.acceptance
 
         # DEBUG
         if debug
-            prop_particle = hop_step.particle
-            prop_spin = hop_step.spin
-            prop_isite = hop_step.isite
-            prop_fsite = hop_step.fsite
+            prop_particle = met_step.particle
+            prop_spin = met_step.spin
+            prop_isite = met_step.isite
+            prop_fsite = met_step.fsite
 
             println("Particle: $prop_particle")
             println("Spin: $prop_spin")
@@ -170,19 +170,19 @@ function local_fermion_update!(Np, model_geometry, tight_binding_model, jastrow,
             accepted_hops += 1
 
             # perform hop   
-            do_particle_hop!(hop_step, pconfig)                 
+            do_particle_hop!(met_step, pconfig, model_geometry)                 
 
             # update particle positions
-            update_particle_position!(hop_step, particle_positions)     
+            update_particle_position!(met_step, particle_positions)     
 
             # # update particle positions 
             # particle_positions = get_particle_positions(pconfig)  
 
             # update Green's function
-            update_equal_greens!(hop_step, W)   
+            update_equal_greens!(met_step, W)   
 
             # update Jastrow factors
-            update_Tvec!(hop_step, jastrow, model_geometry)         
+            update_Tvec!(met_step, jastrow, model_geometry)         
 
             # update variational parameters
             sr_update!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, particle_positions, Np, W, A, η, dt)
@@ -197,9 +197,9 @@ function local_fermion_update!(Np, model_geometry, tight_binding_model, jastrow,
     end
 
     # compute acceptance rate
-    acceptance_rate = accepted_hops / proposed_hops     
+    local_acceptance_rate = accepted_hops / proposed_hops     
 
-    return acceptance_rate, pconfig, jastrow, W
+    return local_acceptance_rate, pconfig, jastrow, W
 end
 
 

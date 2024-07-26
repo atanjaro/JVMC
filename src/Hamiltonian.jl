@@ -491,50 +491,6 @@ end
 
 
 """
-    build_determinantal_state() 
-
-Returns initial energies ε_init, matrix M, and Slater matrix D in 
-the many-particle configuration basis with associated initial energies. 
-
-"""
-function build_determinantal_state()
-    # diagonalize Hamiltonian
-    ε, U = diagonalize(H_mf) 
-    if is_openshell(ε,Np) == true
-        if verbose 
-            println("WARNING! Open shell detected")
-        end
-    else
-        if verbose
-            println("Generating shell...")
-        end
-    end
-    # store energies and M matrix
-    ε₀ = ε[1:Np]  
-    M = hcat(U[:,1:Np])
-
-    # build Slater determinant
-    D = zeros(AbstractFloat, Np, Np)
-    while true
-        pconfig = generate_initial_electron_configuration()
-        D = M[findall(x -> x == 1, pconfig), :]
-        
-        if is_invertible(D)
-            # write matrices to file
-            if write == true
-                writedlm("H_mf.csv", H_mf)
-                writedlm("D.csv", D)
-                writedlm("M.csv", M)
-                writedlm("U.csv", U)
-            end
-
-            return D, pconfig, ε, ε₀, M, U
-        end
-    end    
-end
-
-
-"""
     get_Ak_matrices( V::Vector{Matrix{AbstractFloat}}, U::Matrix{AbstractFloat}, ε::Vector{AbstractFloat}, model_geometry::ModelGeometry ) 
     
 Returns variational parameter matrices Aₖ from the corresponding Vₖ. Computes Qₖ = (U⁺VₖU)_(ην) / (ε_η - ε_ν), for η > Nₚ and ν ≤ Nₚ and is 0 otherwise

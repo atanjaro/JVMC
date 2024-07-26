@@ -1,8 +1,10 @@
-using LatticeUtilities
-using LinearAlgebra
-using DelimitedFiles
-using Distances
+"""
+    Jastrow(  jastrow_type::AbstractString, jpar_matrix::Matrix{AbstractFloat}, 
+                Tvec::Vector{AbstractFloat}, jpar_map::Dict{Any,Any}, num_jpars::Int)
 
+A type defining quantities related to a Jastrow factor.
+
+"""
 struct Jastrow
     # type of Jastrow parameter
     jastrow_type::AbstractString
@@ -34,14 +36,19 @@ Returns a matrix of all possible distances between sites 'i' nd 'j' for a given 
 
 """
 function get_distances()
-    dist = zeros(AbstractFloat, model_geometry.lattice.N, model_geometry.lattice.N)
-    for i in 1:model_geometry.lattice.N
-        for j in 1:model_geometry.lattice.N
-            dist[i,j] = euclidean(site_to_loc(i,model_geometry.unit_cell,model_geometry.lattice)[1],
-                                site_to_loc(j,model_geometry.unit_cell,model_geometry.lattice)[1])
+    N = model_geometry.lattice.N
+    dist = zeros(Float64, N, N)
+    
+    # Precompute locations
+    locations = [site_to_loc(i, model_geometry.unit_cell, model_geometry.lattice)[1] for i in 1:N]
+
+    # Compute distances
+    for i in 1:N
+        for j in 1:N
+            dist[i, j] = euclidean(locations[i], locations[j])
         end
     end
- 
+
     return dist
 end
 
@@ -53,24 +60,44 @@ Sets entries in the distance matrix to some initial Jastrow parameter value and
 sets parameters corresponding to the largest distance to 0.
 
 """
-function set_jpars(dist_matrix) 
+function populate_jpars!(dist_matrix::Matrix{Float64})
     jpar_matrix = copy(dist_matrix)
-
     r_max = maximum(dist_matrix)
-    for i in 1:model_geometry.lattice.N
-        for j in 1:model_geometry.lattice.N
-            if jpar_matrix[i,j] == r_max
-                jpar_matrix[i,j] = 0
+
+    # Update jpar_matrix in place
+    for i in 1:size(dist_matrix, 1)
+        for j in 1:size(dist_matrix, 2)
+            if dist_matrix[i, j] == r_max
+                jpar_matrix[i, j] = 0.0
             elseif i == j
-                jpar_matrix[i,j] == 0  
+                jpar_matrix[i, j] = 0.0
             else
-                jpar_matrix[i,j] = 0.5
+                jpar_matrix[i, j] = 0.5
             end
         end
     end
 
     return jpar_matrix
 end
+
+# function set_jpars(dist_matrix) 
+#     jpar_matrix = copy(dist_matrix)
+
+#     r_max = maximum(dist_matrix)
+#     for i in 1:model_geometry.lattice.N
+#         for j in 1:model_geometry.lattice.N
+#             if jpar_matrix[i,j] == r_max
+#                 jpar_matrix[i,j] = 0
+#             elseif i == j
+#                 jpar_matrix[i,j] == 0  
+#             else
+#                 jpar_matrix[i,j] = 0.5
+#             end
+#         end
+#     end
+
+#     return jpar_matrix
+# end
 
 
 """
@@ -110,7 +137,6 @@ function map_jpars(dist_matrix, jpar_matrix)
     
     return jpar_dist_dict
 end
-
 
 
 """
@@ -195,7 +221,7 @@ number of Jastrow parameters.
 """
 function build_jastrow_factor(jastrow_type)
     dist_matrix = get_distances()
-    jpar_matrix = set_jpars(dist_matrix)
+    jpar_matrix = populate_jpars!(dist_matrix)
     num_jpars = get_num_jpars(jpar_matrix)
     jpar_map = map_jpars(dist_matrix, jpar_matrix)
 
@@ -209,16 +235,6 @@ function build_jastrow_factor(jastrow_type)
     return Jastrow(jastrow_type, jpar_matrix, init_Tvec, jpar_map, num_jpars)
 end
 
-# """
-#     update_jparams!()
-
-# Updates the table of Jastrow parameters. 
-# """
-# function update_jparams!(jastrow)
-
-
-# end
-
 
 """
     recalc_Tvec(Tᵤ::Vector{AbstractFloat}, δT::AbstractFloat)
@@ -228,38 +244,33 @@ then the recalculated T vector Tᵣ replaces the updated T vector Tᵤ.
 
 """
 #TODO: need to update method
-function recalc_Tvec(jastrow, δT, model_geometry)
-    N = model_geometry.lattice.N
-    Tᵣ = get_Tvec(jpar_matrix, jastrow_type)
-    diff = Tᵤ-Tᵣ
-    diff_sum = 0.0
-    T_sum = 0.0
+function recalc_Tvec(Tᵤ::Vector{Float64}, δT::Float64)
 
-    for i in 1:2*N
-        diff_sum += sum(diff[i])
-        T_sum += sum(Tᵣ[i])
-    end
+    # re-get distance matrix
+    dist_matrix = get_distances()
 
-    ΔT = sqrt(diff_sum^2/T_sum)     
+    # repopulate jpar matrix with new jpars
+    jpar_matrix = repopulate_jpars!(dist_matrix)
+
+    # Recalculate Tvec from scratch
+    Tᵣ =  get_Tvec(jpar_matrix, jastrow_type)
+    
+    # Difference in updated Green's function and recalculated Green's function
+    diff = Tᵤ .- Tᵣ
+
+    # Sum the absolute differences and the recalculated Green's function elements
+    diff_sum = sum(abs.(diff))
+    T_sum = sum(abs.(Tᵣ))
+
+    ΔT = sqrt(diff_sum / T_sum)
 
     if ΔT > δT
-        if verbose == true
-            println("WARNING! T vector has been recalculated: ΔT = ", ΔT, " > δT = ", δT)
-        end
+        verbose && println("WARNING! Green's function has been recalculated: ΔW = ", ΔT, " > δW = ", δT)
         return Tᵣ, ΔT
-
-    else # ΔT < δT
-        if verbose == true
-            println("T vector is stable: ΔT = ", ΔT, " > δT = ", δT)
-        end
+    else
+        verbose && println("Green's function is stable: ΔW = ", ΔT, " < δW = ", δT)
         return Tᵤ, ΔT
     end  
 end
-
-
-# end # of module
-
-
-
 
 

@@ -4,6 +4,8 @@ using LinearAlgebra
 using DelimitedFiles
 using BenchmarkTools
 using Profile
+using Distributions
+using Distances
 
 # files to include
 include("Hamiltonian.jl")
@@ -116,7 +118,7 @@ bin_size = div(N_updates, N_bins)
 δT = 1e-3
 
 # SR stabilization factor
-η = 1e-4      # 10⁻⁴ is probably good good for the Hubbard model
+η = 1e-4      # 10⁻⁴ is probably good for the Hubbard model
 
 # initial SR optimization rate
 dt = 0.1        # dt must be of sufficient size such that convergence is rapid and the algorithm remains stable
@@ -193,13 +195,13 @@ determinantal_parameters = initialize_determinantal_parameters(parameters_to_opt
 (H_mf, V) = build_mean_field_hamiltonian()
 
 # initialize Slater determinant state and initial particle configuration
-(D, pconfig, ε, ε₀, M, P) = build_determinantal_state()  
+(D, pconfig, ε, ε₀, M, Uₑ) = build_determinantal_state()  
 
 # initialize uncorrelated phonon state and initial particle configuration
 # (P, phconfig) = build_phonon_state()
 
 # initialize variational parameter matrices
-A = get_Ak_matrices(V, P, ε, model_geometry)
+A = get_Ak_matrices(V, Uₑ, ε, model_geometry)
 
 # initialize equal-time Green's function (W matrix)
 W = get_equal_greens(M, D)
@@ -248,12 +250,12 @@ if verbose
 end
 
 # Iterate over burnin/thermalization updates.
-for n in 1:N_burnin
+for n in 1:100 #N_burnin
     # perform local update to fermionic dofs
-    (acceptance_rate, pconfig, jastrow, W) = local_fermion_update!(Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng)
+    (local_acceptance_rate, pconfig, jastrow, W) = local_fermion_update!(Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng)
 
     # record acceptance rate
-    # additional_info["fermionic_local_acceptance_rate"] += acceptance_rate
+    additional_info["fermionic_local_acceptance_rate"] += local_acceptance_rate
 
     # perform local updates to phonon dofs
     # local_phonon_update!(model_geometry, electron_phonon_model, jastrow, phconfig)
@@ -261,9 +263,10 @@ for n in 1:N_burnin
     # additional_info["phononic_local_acceptance_rate"] += acceptance_rate
 end
 
-# recompute W and Tvec(s) for numerical stabilization
-# TODO: this may be moved within the updating scheme
-(W, ΔW) = recalc_equal_greens(W, δW)
+# recompute W for numerical stabilization
+(W, ΔW, D) = recalc_equal_greens(W, δW, D, pconfig)
+
+# recompute T for numerical stabilization
 # recalc_Tvec(Tᵤ, δT, model_geometry)       # TODO: need to update recalc_Tvec() method
 
 

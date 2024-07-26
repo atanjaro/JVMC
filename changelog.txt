@@ -235,11 +235,37 @@ BUG: parameter values are NOT being updated during the Monte Carlo cycles.
 Change log (07/25):
 Updated initialize_measurement_container() method to store vectors of variational parameter values in parameter_measurements.
 Updated sr_update!() to push updated variational parameter values during Monte Carlo cycles.
-do_particle_hop!() methdo moved to ParticleConfiguration.jl.
+do_particle_hop!() method moved to ParticleConfiguration.jl.
 BUGFIX: fixed random neighbor selection in metropolis()
 BUGFIX: do_particle_hop!() method was not accouting for spin species when hopping, thus particle_positions was fluctuating in size.
 
 Upcoming changes:
 Optimization of various functions.
+Adding binning functionality to measurement container.
+Add write_measurements!() method.
+
+
+Change log (07/26):
+Optimized and updated Greens.jl
+      Optimized get_equal_greens() method.
+      Optimzed update_equal_greens!() method.
+      Optimized and updated recalc_equal_greens() method to account for change in D during simulation.
+      Moved build_determinantal_state() method to Greens.jl.
+      Optimized build_determinantal_state() method.
+
+Optimized and updated ParticleConfiguration.jl
+      Changed 'generate_initial_electron_configuration()' method to 'generate_initial_fermion_configuration()'.
+      Optimized generate_initial_fermion_configuration() method.
+      Optimized get_spindex_type() method.
+      Optimized get_index_from_spindex() method.
+      Optimized get_spindices_from_index() method.
+
+Optimized and updated Jastrow.jl
+      Optimized get_distances() method.
+      Optimized set_jpars!() method.
+
+
+Upcoming changes:
+Update Jastrow parameter updating/organization.
 Adding binning functionality to measurement container.
 Add write_measurements!() method.
