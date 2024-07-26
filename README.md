@@ -1,5 +1,7 @@
 # VariationalMC
 
+![alt text](https://github.com/atanjaro/VariationalMC/blob/main/images/variationalmc-logo-dark.png "VariationalMC logo")
+
 This package implements the Variational Monte Carlo (VMC) method for Hubbard, and electron-phonon interactions, including both Holstein and Su-Schrieffer-Heeger (SSH) style electron-phonon coupling (coming soon).
 
 WARNING! Modules are currently in the developmental phase and are highly experimental. Use at own risk.
