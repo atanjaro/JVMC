@@ -215,7 +215,9 @@ function do_particle_hop!(proposed_hop, pconfig)
         k_dn = get_spindices_from_index(k)[2]
         l_dn = get_spindices_from_index(l)[2]
 
-        @info "Hopping particle from site $k to site $l"
+        if debug
+            @info "Hopping particle from site $k to site $l"
+        end
 
         pconfig[k_dn] = 0
         pconfig[l_dn] = 1

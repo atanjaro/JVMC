@@ -125,7 +125,7 @@ dt = 0.1        # dt must be of sufficient size such that convergence is rapid a
 verbose = true
 
 # debugging (this will be removed later)
-debug = true
+debug = false
 
 # whether to output matrices to file
 write = false
