@@ -1,8 +1,8 @@
-# JVMC (soon to be SmoQyVMC)
+# Variational MC
 
 This package implements the Variational Monte Carlo (VMC) method for Hubbard, and electron-phonon interactions, including both Holstein and Su-Schrieffer-Heeger (SSH) style electron-phonon coupling (coming soon).
 
-Modules are currently in the developmental phase and are highly experimental. This package will eventually become part of the SmoQySuite (https://github.com/SmoQySuite/) collection of many-body simulations.
+WARNING! Modules are currently in the developmental phase and are highly experimental. Use at own risk.
 
 
 ## Funding 
