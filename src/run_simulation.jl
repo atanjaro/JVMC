@@ -132,7 +132,7 @@ debug = false
 # whether to output matrices to file
 write = false
 
-# initialize addition simulation information dictionary
+# initialize additional simulation information dictionary
 additional_info = Dict(
     "δW" => δW,
     "δT" => δT,
@@ -197,9 +197,6 @@ determinantal_parameters = initialize_determinantal_parameters(parameters_to_opt
 # initialize Slater determinant state and initial particle configuration
 (D, pconfig, ε, ε₀, M, Uₑ) = build_determinantal_state()  
 
-# initialize uncorrelated phonon state and initial particle configuration
-# (P, phconfig) = build_phonon_state()
-
 # initialize variational parameter matrices
 A = get_Ak_matrices(V, Uₑ, ε, model_geometry)
 
@@ -208,6 +205,9 @@ W = get_equal_greens(M, D)
 
 # construct electron density-density Jastrow factor
 e_den_den_jastrow = build_jastrow_factor("e-den-den")
+
+# initialize variational parameters
+variational_parameters = cat_vpars(determinantal_parameters, e_den_den_jastrow)
 
 # construct electron spin-spin Jastrow factor 
 # e_spn_spn_jastrow = build_jastrow_factor("e-spn-spn")
@@ -221,9 +221,8 @@ e_den_den_jastrow = build_jastrow_factor("e-den-den")
 # construct phonon displacement-displacement Jastrow factor
 # ph_dps_dsp_jastrow = build_jastrow_factor("eph-dsp-dsp")
 
-# initialize variational parameters
-variational_parameters = cat_vpars(determinantal_parameters, e_den_den_jastrow)
-
+# initialize uncorrelated phonon state and initial particle configuration
+# (P, phconfig) = build_phonon_state()
 
 #############################
 ## INITIALIZE MEASUREMENTS ##
@@ -250,7 +249,7 @@ if verbose
 end
 
 # Iterate over burnin/thermalization updates.
-for n in 1:100 #N_burnin
+for n in 1:N_burnin
     # perform local update to fermionic dofs
     (local_acceptance_rate, pconfig, jastrow, W) = local_fermion_update!(Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng)
 
@@ -264,6 +263,7 @@ for n in 1:100 #N_burnin
 end
 
 # recompute W for numerical stabilization
+# TODO; move into updating scheme (should be done after ~500 updates)
 (W, ΔW, D) = recalc_equal_greens(W, δW, D, pconfig)
 
 # recompute T for numerical stabilization
