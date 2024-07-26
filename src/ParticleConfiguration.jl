@@ -187,9 +187,44 @@ occupying a real lattice site i.
 
 """
 function number_operator(site, pconfig)
-    return pconfig[site],                                           # number of spin-up electrons
-         pconfig[site+model_geometry.lattice.N],                    # number of spin-down electrons
-         pconfig[site] + pconfig[site+model_geometry.lattice.N]     # total number of electrons on a site
+    nup = pconfig[site]
+    ndn = pconfig[site+model_geometry.lattice.N]
+    Ne = pconfig[site] + pconfig[site+model_geometry.lattice.N]
+
+    return nup, ndn, Ne
+end
+
+"""
+    do_particle_hop!( pconfig::Matrix{Int})
+
+If proposed particle hop is accepted, perform the particle hop.
+
+"""
+function do_particle_hop!(proposed_hop, pconfig)
+    # spin of the particle
+    spin = proposed_hop.spin
+
+    # initial site
+    k = proposed_hop.isite
+
+    # final site
+    l = proposed_hop.fsite
+
+    # account for spin-up and spin-down sectors
+    if spin == 2
+        k_dn = get_spindices_from_index(k)[2]
+        l_dn = get_spindices_from_index(l)[2]
+
+        @info "Hopping particle from site $k to site $l"
+
+        pconfig[k_dn] = 0
+        pconfig[l_dn] = 1
+    else
+        pconfig[k] = 0
+        pconfig[l] = 1 
+    end
+    
+    return nothing
 end
 
 
@@ -210,7 +245,13 @@ function get_particle_positions(pconfig)
         end
     end
 
-    return sort(collect(particle_positions), by = x->x[1])
+    sorted_positions = sort(collect(particle_positions), by = x->x[1])
+
+    if length(sorted_positions) != Np
+        @error "Mismatch in particle_positions length: expected $Np, got $(length(sorted_positions))"
+    end
+    
+    return sorted_positions
 end
 
 
@@ -231,6 +272,9 @@ function update_particle_position!(proposed_hop, particle_positions)
         return nothing
     end
 end
+
+
+
 
 
 

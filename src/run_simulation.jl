@@ -9,7 +9,7 @@ using Profile
 include("Hamiltonian.jl")
 include("ParticleConfiguration.jl")
 include("Jastrow.jl")
-include("VMC.jl")
+include("Markov.jl")
 include("Utilities.jl")
 include("Greens.jl")
 include("StochasticReconfiguration.jl")

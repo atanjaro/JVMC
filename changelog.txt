@@ -232,5 +232,14 @@ BUG: During some simulation runtimes, a particle is mysteriously removed from 'p
      simulations randomly
 BUG: parameter values are NOT being updated during the Monte Carlo cycles.
 
+Change log (07/25):
+Updated initialize_measurement_container() method to store vectors of variational parameter values in parameter_measurements.
+Updated sr_update!() to push updated variational parameter values during Monte Carlo cycles.
+do_particle_hop!() methdo moved to ParticleConfiguration.jl.
+BUGFIX: fixed random neighbor selection in metropolis()
+BUGFIX: do_particle_hop!() method was not accouting for spin species when hopping, thus particle_positions was fluctuating in size.
 
-
+Upcoming changes:
+Optimization of various functions.
+Adding binning functionality to measurement container.
+Add write_measurements!() method.

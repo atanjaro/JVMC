@@ -34,7 +34,7 @@ function initialize_measurement_container(model_geometry, N_burnin, N_updates, v
         ("parameters", Any[])    
     ])
     # initialize parameters values
-    parameter_measurements["parameters"] = variational_parameters  
+    parameter_measurements["parameters"] = [variational_parameters]  
 
     correlation_measurements = Dict()
 
@@ -194,7 +194,7 @@ Calculates the local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂αₖ, with
 in the determinantal part of the wavefunction. Returns a vector of derivatives.
 
 """
-function get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)  
+function get_local_detpar_derivative(determinantal_parameters, model_geometry, particle_positions, Np, W, A)  
 
     # dimensions
     dims = model_geometry.unit_cell.n * model_geometry.lattice.N
@@ -203,7 +203,7 @@ function get_local_detpar_derivative(determinantal_parameters, model_geometry, p
     num_detpars = determinantal_parameters.num_detpars
     
     # particle positions
-    particle_positions = get_particle_positions(pconfig)
+    # particle_positions = get_particle_positions(pconfig)
 
     # vector to store derivatives
     derivatives = zeros(AbstractFloat, num_detpars)
@@ -238,11 +238,10 @@ to the measurement container.
 
 """
 # PASSED
-function measure_Δk!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
-    jastrow = e_den_den_jastrow
+function measure_Δk!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, particle_positions, Np, W, A)
     # perform derivatives
-    detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
-    jpar_derivatives = get_local_jpar_derivative(jastrow,pconfig)
+    detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, particle_positions, Np, W, A)
+    jpar_derivatives = get_local_jpar_derivative(jastrow, pconfig)
     Δk = vcat(detpar_derivatives,jpar_derivatives)
 
     # record current expectation values
@@ -266,14 +265,14 @@ to the measurement container.
 
 """
 # PASSED
-function measure_ΔkE!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, Np, W, A)
+function measure_ΔkE!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, particle_positions,  Np, W, A)
     # perform derivatives
-    detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
+    detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, particle_positions, Np, W, A)
     jpar_derivatives = get_local_jpar_derivative(jastrow,pconfig)
     Δk = vcat(detpar_derivatives,jpar_derivatives)
 
     # compute local energy
-    E = get_local_energy(model_geometry, tight_binding_model,jastrow,pconfig) 
+    E = get_local_energy(model_geometry, tight_binding_model,jastrow,pconfig, particle_positions) 
 
     # compute product of local derivatives with the local energy
     ΔkE = Δk * E
@@ -299,9 +298,9 @@ to the measurement container.
 
 """
 # PASSED
-function measure_ΔkΔkp!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, Np, W, A)
+function measure_ΔkΔkp!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, particle_positions, Np, W, A)
     # perform derivatives
-    detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, pconfig, Np, W, A)
+    detpar_derivatives = get_local_detpar_derivative(determinantal_parameters, model_geometry, particle_positions, Np, W, A)
     jpar_derivatives = get_local_jpar_derivative(jastrow,pconfig)
     Δk = vcat(detpar_derivatives,jpar_derivatives)
 
@@ -328,7 +327,7 @@ Calculates the local variational energy. Returns the total local energy and writ
 
 """
 # PASSED
-function get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
+function get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig, particle_positions)
     # number of sites
     N = model_geometry.lattice.N
 
@@ -341,7 +340,7 @@ function get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
     nbr_map = map_neighbor_table(nbr_table)
 
     # particle positions
-    particle_positions = get_particle_positions(pconfig)
+    # particle_positions = get_particle_positions(pconfig)
 
     E_loc_kinetic = 0.0
     E_loc_hubbard = 0.0
@@ -397,7 +396,7 @@ end
 Calculates the local variational energy. Returns the total local energy and writes to the measurement container.
 
 """
-function get_local_energy(model_geometry, tight_binding_model, jastrow1, jastrow2, pconfig)
+function get_local_energy(model_geometry, tight_binding_model, jastrow1, jastrow2, pconfig, particle_positions)
     # number of sites
     N = model_geometry.lattice.N
 
@@ -410,7 +409,7 @@ function get_local_energy(model_geometry, tight_binding_model, jastrow1, jastrow
     nbr_map = map_neighbor_table(nbr_table)
 
     # particle positions
-    particle_positions = get_particle_positions(pconfig)
+    # particle_positions = get_particle_positions(pconfig)
 
     E_loc_kinetic = 0.0
     E_loc_hubbard = 0.0
@@ -461,7 +460,7 @@ end
 Calculates the local variational energy. Returns the total local energy and writes to the measurement container.
 
 """
-function get_local_energy(model_geometry, tight_binding_model, jastrow1, jastrow2, jastrow3, pconfig)
+function get_local_energy(model_geometry, tight_binding_model, jastrow1, jastrow2, jastrow3, pconfig, particle_positions)
     # number of sites
     N = model_geometry.lattice.N
 
@@ -474,7 +473,7 @@ function get_local_energy(model_geometry, tight_binding_model, jastrow1, jastrow
     nbr_map = map_neighbor_table(nbr_table)
 
     # particle positions
-    particle_positions = get_particle_positions(pconfig)
+    # particle_positions = get_particle_positions(pconfig)
 
     E_loc_kinetic = 0.0
     E_loc_hubbard = 0.0
@@ -529,9 +528,9 @@ Measures the total local energy and writes to the measurement container.
 
 """
 # PASSED
-function measure_local_energy!(measurement_container, model_geometry, tight_binding_model, jastrow, pconfig)
+function measure_local_energy!(measurement_container, model_geometry, tight_binding_model, jastrow, pconfig, particle_positions)
     # calculate the current local energy
-    E_loc = get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig)
+    E_loc = get_local_energy(model_geometry, tight_binding_model, jastrow, pconfig, particle_positions)
 
     # record current expectation values
     local_measurement = measurement_container.scalar_measurements["energy"][2] .+ E_loc
