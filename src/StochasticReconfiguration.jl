@@ -97,7 +97,7 @@ end
                 jastrow, model_geometry, tight_binding_model, 
                 pconfig, Np, W, A, η, dt)
 
-Update variational parameters.
+Update variational parameters through stochastic optimization.
 
 """
 function sr_update!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, particle_positions,Np, W, A, η, dt)
@@ -109,12 +109,13 @@ function sr_update!(measurement_container, determinantal_parameters, jastrow, mo
     # perform gradient descent
     δvpars = parameter_gradient(S,f,η)     
 
-    # update parameters
+    # update ALL parameters
     vpars = cat_vpars(determinantal_parameters, jastrow)
-    vpars += dt * δvpars
+    vpars += dt * δvpars    # TODO: start with a large dt and reduce as energy is minimized
     push!(measurement_container.parameter_measurements["parameters"], vpars)
 
-    # TODO: start with a large dt and reduce as energy is minimized
+    # push back Jastrow parameters
+    update_jastrow!(jastrow, vpars)
 
     return nothing
 end

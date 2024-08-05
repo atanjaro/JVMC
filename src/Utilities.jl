@@ -135,7 +135,7 @@ Generates an array combining all values of determinantal and Jastrow parameters.
 
 """
 function cat_vpars(determinantal_parameters, jastrow)
-    jpars = [v[2] for v in values(jastrow.jpar_map)]
+    jpars = jastrow.jpars
     detpars = determinantal_parameters.vals
     
     # concatenate variational parameters

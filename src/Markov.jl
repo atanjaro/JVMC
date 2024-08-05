@@ -117,7 +117,7 @@ end
                         jastrow::Jastrow, pconfig::Vector{Int64}, rng::Xoshiro)
 
 Perform a local MC update. Proposes moves and accept/rejects via Metropolis algorithm,
-if accepted, updates particle positions, T vector, W matrix, and variational parameters.
+if accepted, updates particle positions, T vector, Green's function (W matrix), and variational parameters.
 
 """
 function local_fermion_update!(Np, model_geometry, tight_binding_model, jastrow, pconfig, rng)
@@ -181,7 +181,7 @@ function local_fermion_update!(Np, model_geometry, tight_binding_model, jastrow,
             # update Green's function
             update_equal_greens!(met_step, W)   
 
-            # update Jastrow factors
+            # update T vector
             update_Tvec!(met_step, jastrow, model_geometry)         
 
             # update variational parameters

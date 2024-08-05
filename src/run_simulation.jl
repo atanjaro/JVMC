@@ -6,6 +6,7 @@ using BenchmarkTools
 using Profile
 using Distributions
 using Distances
+using OrderedCollections
 
 # files to include
 include("Hamiltonian.jl")
@@ -110,11 +111,9 @@ N_bins = 100
 bin_size = div(N_updates, N_bins)
 
 # Maximum allowed error in the equal-time Green's function
-# which is corrected by numerical stabilization
 δW = 1e-3
 
 # Maximum allowed error in the T vector
-# which is corrected by numerical stabilization
 δT = 1e-3
 
 # SR stabilization factor
@@ -204,11 +203,12 @@ A = get_Ak_matrices(V, Uₑ, ε, model_geometry)
 W = get_equal_greens(M, D)
 
 # construct electron density-density Jastrow factor
-e_den_den_jastrow = build_jastrow_factor("e-den-den")
+e_den_den_jastrow = build_jastrow_factor("e-den-den", model_geometry, rng, pconfig, readin_jpars)
 
-# initialize variational parameters
+# initialize variational_parameters
 variational_parameters = cat_vpars(determinantal_parameters, e_den_den_jastrow)
 
+# other Jastrow factors
 # construct electron spin-spin Jastrow factor 
 # e_spn_spn_jastrow = build_jastrow_factor("e-spn-spn")
 
@@ -249,7 +249,7 @@ if verbose
 end
 
 # Iterate over burnin/thermalization updates.
-for n in 1:N_burnin
+for n in 1:50   #N_burnin
     # perform local update to fermionic dofs
     (local_acceptance_rate, pconfig, jastrow, W) = local_fermion_update!(Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng)
 
@@ -266,8 +266,8 @@ end
 # TODO; move into updating scheme (should be done after ~500 updates)
 (W, ΔW, D) = recalc_equal_greens(W, δW, D, pconfig)
 
-# recompute T for numerical stabilization
-# recalc_Tvec(Tᵤ, δT, model_geometry)       # TODO: need to update recalc_Tvec() method
+# recompute T for numerical stabilization (should be done after ~500 updates)
+recalc_Tvec(jastrow, δT, model_geometry)       
 
 
 ##################################################################
@@ -288,9 +288,7 @@ for bin in 1:N_bins
         # perform local updates to phonon dofs
         # local_phonon_update!(model_geometry, electron_phonon_model, jastrow, phconfig)
 
-        # additional_info["phononic_local_acceptance_rate"] += acceptance_rate
-
-        #TODO: add additional numerical stabilization?
+        # additional_info["phononic_local_acceptance_rate"] += acceptance_rates
     end
 
     # Write the average measurements for the current bin to file.

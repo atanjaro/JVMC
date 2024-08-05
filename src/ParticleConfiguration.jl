@@ -60,23 +60,22 @@ function generate_initial_fermion_configuration()
 end
 
 
-# """
-#     generate_initial_onsite_phonon_configuration() 
+"""
+    generate_initial_onsite_phonon_configuration() 
 
-# Returns a randomly generated initial configuration of onsite optical phonons.
-# This would apply to Holstein and optical-SSH models.
+Returns a randomly generated initial configuration of onsite optical phonons.
+This would apply to Holstein and optical-SSH models.
 
-# """
-# function generate_initial_onsite_phonon_configuration()
-#     init_phconfig = zeros(Int, model_geometry.lattice.N)  
+"""
+function generate_initial_onsite_phonon_configuration()
+    init_phconfig = zeros(Int, model_geometry.lattice.N)  
 
-#     for i in 1:model_geometry.lattice.N
-#         upper_bound = rand(rng, 1:typemax(Int))
-#         init_phconfig[i] = rand(rng, 0:upper_bound) 
-#     end
+    for i in 1:model_geometry.lattice.N
+        init_phconfig[i] = rand(rng, -typemax(Int):typemax(Int)) 
+    end
 
-#     return init_phconfig
-# end
+    return init_phconfig
+end
 
 
 # """

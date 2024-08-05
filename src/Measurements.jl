@@ -138,15 +138,15 @@ function get_local_jpar_derivative(jastrow, pconfig)
     # for density Jastrow
     if jastrow_type == "e-den-den"
         for num in 1:num_jpars
-            for (i, r1) in jpar_map
-                for (j, r2) in jpar_map
-                    if r1[1] == r2[1]
+            for (r1i, jpars1) in jpar_map         #former: indices => (dist, jpar) : (1, 2) => (1.0, jpar)
+                for (r2j, jpars2) in jpar_map
+                    if r1i[1] == r2j[1]
                         if pht == true
-                            derivatives[num] += -(number_operator(j[1],pconfig)[1] - number_operator(j[1],pconfig)[2]) * (
-                                                  number_operator(j[2],pconfig)[1] - number_operator(j[2],pconfig)[2])
+                            derivatives[num] += -(number_operator(r1i[2][1],pconfig)[1] - number_operator(r1i[2][1],pconfig)[2]) * (
+                                                  number_operator(r1i[2][2],pconfig)[1] - number_operator(r1i[2][2],pconfig)[2])
                         elseif pht == false
-                            derivatives[num] += -(number_operator(j[1],pconfig)[1] + number_operator(j[1],pconfig)[2]) * (
-                                                  number_operator(j[2],pconfig)[1] + number_operator(j[2],pconfig)[2])
+                            derivatives[num] += -(number_operator(r1i[2][1],pconfig)[1] + number_operator(r1i[2][1],pconfig)[2]) * (
+                                                  number_operator(r1i[2][2],pconfig)[1] + number_operator(r1i[2][2],pconfig)[2])
                         else
                         end
                     else
@@ -155,20 +155,24 @@ function get_local_jpar_derivative(jastrow, pconfig)
             end
         end
 
+        for (ir1, jpar) in jpar_map
+            println(ir1)
+        end
+
         return derivatives
 
     # for spin Jastrow
     elseif jastrow_type == "e-spin-spin"   
         for num in 1:num_jpars
-            for (i, r1) in jpar_map
-                for (j, r2) in jpar_map
-                    if r1[1] == r2[1]
+            for (r1i, jpars1) in jpar_map         
+                for (r2j, jpars2) in jpar_map
+                    if r1i[1] == r2j[1]
                         if pht == true
-                            derivatives[num] += -(number_operator(j[1],pconfig)[1] - number_operator(j[1], pconfig)[2]) * (
-                                                  number_operator(j[2], pconfig)[1] - number_operator(j[2], pconfig)[2])
+                            derivatives[num] += -(number_operator(r1i[2][1],pconfig)[1] - number_operator(r1i[2][1], pconfig)[2]) * (
+                                                  number_operator(r1i[2][2], pconfig)[1] - number_operator(r1i[2][2], pconfig)[2])
                         elseif pht == false
-                            derivatives[num] += -(number_operator(j[1],pconfig)[1] + number_operator(j[1], pconfig)[2]) * (
-                                                  number_operator(j[2], pconfig)[1] + number_operator(j[2], pconfig)[2])
+                            derivatives[num] += -(number_operator(r1i[2][1],pconfig)[1] + number_operator(r1i[2][1], pconfig)[2]) * (
+                                                  number_operator(r1i[2][2], pconfig)[1] + number_operator(r1i[2][2], pconfig)[2])
                         else
                         end
                     end
