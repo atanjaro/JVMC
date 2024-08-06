@@ -124,13 +124,13 @@ a vector of derivatives.
 """
 function get_local_jpar_derivative(jastrow, pconfig)
     # jastrow type
-    jastrow_type = jastrow.jastrow_type
+    jastrow_type = jastrow.jastrow_type;
 
     # number of Jastrow parameters
-    num_jpars = jastrow.num_jpars
+    num_jpars = jastrow.num_jpars;
 
-    # map of Jastrow parameters
-    jpar_map = jastrow.jpar_map
+    # map of Jastrow parametersß
+    jpar_map = jastrow.jpar_map;
 
     # vector to store derivatives
     derivatives = zeros(AbstractFloat, num_jpars)
@@ -153,10 +153,6 @@ function get_local_jpar_derivative(jastrow, pconfig)
                     end
                 end
             end
-        end
-
-        for (ir1, jpar) in jpar_map
-            println(ir1)
         end
 
         return derivatives

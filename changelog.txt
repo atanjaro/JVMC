@@ -297,9 +297,6 @@ Continuing overhaul of the Jastrow module:
       Updated recalc_Tvec() method.
 Updated get_local_jpar_derivative() method to reflect change in structure of jpar_map.
 
-
-
-
 Upcoming changes:
 Bugfix of update_jastrow!() method. Keys not being recognized.
 Adding binning functionality to measurement container.
@@ -307,6 +304,30 @@ Add write_measurements!() method.
 Redo reporting of acceptance/acceptance rates.
 Numerical stabilzation should be done about every 500 iterations, need to 
 find a way to incorporate this during MC cycle.
+
+Change log (08/05/2024):
+Fixed bug in update_jastrow!() method involving inability to parse jpar_map keys.
+Updated LocalAcceptance constructor.
+Updated local_fermion_update!() method to include 'n_iter' variable, and logic which checks the iteration 
+      number and automatically performs numerical stabilization routines.
+Changed 'Jastrow' type to 'mutable struct' for ease of updating during runtime.
+Updated recalc_equal_greens() method to return only 'W' and 'D'.
+Updated recalc_Tvec!() method
+Changed name of main module to 'VariationalMC' to reflect the change in the package name.
+Updated and changed name of 'StochasticReconfiguration' module to 'Hessian', as this is a more accurate description:
+      Changed 'get_sr_comatrix()' to 'get_hessian_matrix()'
+      Changed 'get_sr_forces()' to 'get_force_vector()'
+      Updated method names in sr_update!() 
+
+
+Upcoming changes:
+Debug Measurements module, specifically to track the number of current iterations during the course of measurements.
+Adding binning functionality to measurement container.
+Add write_measurements!() method.
+
+
+
+
 
 
 

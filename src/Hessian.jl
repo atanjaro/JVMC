@@ -1,16 +1,14 @@
-using LinearAlgebra
-
 """
-    get_sr_comatrix(measurement_container, determinantal_parameters, 
+    get_hessian_matrix(measurement_container, determinantal_parameters, 
                     jastrow, model_geometry, tight_binding_model, pconfig, 
                     Np, W, A )
 
-Generates the covariance matrix S, for Stochastic Reconfiguration
+Generates the covariance (Hessian) matrix S, for Stochastic Reconfiguration
 
 The matrix S has elements S_kk' = <Δ_kΔk'> - <Δ_k><Δ_k'>
 
 """
-function get_sr_comatrix(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, particle_positions,Np, W, A )
+function get_hessian_matrix(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, particle_positions,Np, W, A )
 
     # measure local parameters derivatives ⟨Δₖ⟩ (also ⟨Δₖ'⟩), for this configuration
     measure_Δk!(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, particle_positions, Np, W, A)
@@ -31,7 +29,7 @@ end
 
 
 """
-    get_sr_forces(measurement_container, determinantal_parameters, 
+    get_force_vector(measurement_container, determinantal_parameters, 
                 jastrow, model_geometry, tight_binding_model, pconfig,
                  Np, W, A )
 
@@ -41,7 +39,7 @@ The vector f has elements f_k = <Δ_k><H> - <Δ_kH>
 
 """
 # PASSED
-function get_sr_forces(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, particle_positions, Np, W, A )
+function get_force_vector(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, particle_positions, Np, W, A )
     
     # initialize force vector
     f = [] 
@@ -101,10 +99,10 @@ Update variational parameters through stochastic optimization.
 
 """
 function sr_update!(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, particle_positions,Np, W, A, η, dt)
-    # get covariance matrix
-    S = get_sr_comatrix(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, particle_positions, Np, W, A )
+    # get covariance (Hessian) matrix
+    S = get_hessian_matrix(measurement_container, determinantal_parameters, jastrow, model_geometry, pconfig, particle_positions, Np, W, A )
     # get force vector
-    f = get_sr_forces(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, particle_positions, Np, W, A)
+    f = get_force_vector(measurement_container, determinantal_parameters, jastrow, model_geometry, tight_binding_model, pconfig, particle_positions, Np, W, A)
 
     # perform gradient descent
     δvpars = parameter_gradient(S,f,η)     

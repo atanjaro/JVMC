@@ -110,6 +110,9 @@ N_bins = 100
 # bin size
 bin_size = div(N_updates, N_bins)
 
+# number of iterations until check for numerical stability 
+n_stab = 500
+
 # Maximum allowed error in the equal-time Green's function
 δW = 1e-3
 
@@ -249,9 +252,9 @@ if verbose
 end
 
 # Iterate over burnin/thermalization updates.
-for n in 1:50   #N_burnin
+for n in 1:N_burnin
     # perform local update to fermionic dofs
-    (local_acceptance_rate, pconfig, jastrow, W) = local_fermion_update!(Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng)
+    (local_acceptance_rate, pconfig, jastrow, W, D) = local_fermion_update!(W, D, Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng, n, n_stab)
 
     # record acceptance rate
     additional_info["fermionic_local_acceptance_rate"] += local_acceptance_rate
@@ -261,13 +264,6 @@ for n in 1:50   #N_burnin
 
     # additional_info["phononic_local_acceptance_rate"] += acceptance_rate
 end
-
-# recompute W for numerical stabilization
-# TODO; move into updating scheme (should be done after ~500 updates)
-(W, ΔW, D) = recalc_equal_greens(W, δW, D, pconfig)
-
-# recompute T for numerical stabilization (should be done after ~500 updates)
-recalc_Tvec(jastrow, δT, model_geometry)       
 
 
 ##################################################################
@@ -280,7 +276,7 @@ for bin in 1:N_bins
     # Iterate over the number of updates and measurements performed in the current bin.
     for n in 1:bin_size
         # perform local update to fermionic dofs
-        (acceptance_rate, pconfig, jastrow, W) = local_fermion_update!(Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng)
+        (acceptance_rate, pconfig, jastrow, W, D) = local_fermion_update!(W, D, Ne, model_geometry, tight_binding_model, e_den_den_jastrow, pconfig, rng, n, n_stab)
 
         # record acceptance rate
         additional_info["fermionic_local_acceptance_rate"] += acceptance_rate
@@ -310,8 +306,7 @@ end
 additional_info["time"] += t_end - t_start
 
 # normalize acceptance rate measurements
-additional_info["fermionic_local_acceptance_rate"] /= (N_updates + N_burnin)
-# additional_info["phonon_acceptance_rate"] /= (N_updates + N_burnin)
+additional_info["local_acceptance_rate"] /= (N_burnin + N_updates)
 
 # write simulation information to file
 # save_simulation_info(simulation_info, additional_info)

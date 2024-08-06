@@ -121,10 +121,10 @@ function recalc_equal_greens(Wᵤ::Matrix{Float64}, δW::Float64, D::Matrix{Floa
 
     if ΔW > δW
         verbose && println("WARNING! Green's function has been recalculated: ΔW = ", ΔW, " > δW = ", δW)
-        return Wᵣ, ΔW, Dᵣ
+        return Wᵣ, Dᵣ
     else
         verbose && println("Green's function is stable: ΔW = ", ΔW, " < δW = ", δW)
-        return Wᵤ, ΔW, D
+        return Wᵤ, D
     end  
 end
 

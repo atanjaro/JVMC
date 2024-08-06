@@ -30,7 +30,7 @@ Constructor for the local acceptance type.
 
 """
 function local_acceptance()
-   acceptance, particle, spin, isite, fsite =  metropolis(particle_positions)
+   acceptance, particle, spin, isite, fsite =  metropolis(W, jastrow, particle_positions, rng)
 
    return LocalAcceptance(acceptance, particle, spin, isite, fsite)
 end
@@ -120,7 +120,7 @@ Perform a local MC update. Proposes moves and accept/rejects via Metropolis algo
 if accepted, updates particle positions, T vector, Green's function (W matrix), and variational parameters.
 
 """
-function local_fermion_update!(Np, model_geometry, tight_binding_model, jastrow, pconfig, rng)
+function local_fermion_update!(W, D, Ne, model_geometry, tight_binding_model, jastrow, pconfig, rng, n_iter, n_stab)
     if verbose
         println("Starting new Monte Carlo cycle...")
     end
@@ -130,14 +130,23 @@ function local_fermion_update!(Np, model_geometry, tight_binding_model, jastrow,
     # counts number of accepted hops
     accepted_hops = 0
 
-    # perform number of metropolis steps equal to the number of particles
-    for s in 1:Np
+    # perform number of metropolis steps equal to the number of electrons
+    for s in 1:Ne
         if verbose
             println("Metropolis step = $s")
         end
 
         # increment number of proposed hops
         proposed_hops += 1
+
+        # checks for numerical stability
+        if n_iter % n_stab == 0
+            # check stability of Green's function 
+            (W, D) = recalc_equal_greens(W, δW, D, pconfig)
+
+            # check stability of T vector
+            recalc_Tvec!(jastrow::Jastrow, δT::Float64)
+        end
 
         # get particle positions
         particle_positions = get_particle_positions(pconfig, model_geometry)    
@@ -199,7 +208,7 @@ function local_fermion_update!(Np, model_geometry, tight_binding_model, jastrow,
     # compute acceptance rate
     local_acceptance_rate = accepted_hops / proposed_hops     
 
-    return local_acceptance_rate, pconfig, jastrow, W
+    return local_acceptance_rate, pconfig, jastrow, W, D
 end
 
 

@@ -6,7 +6,7 @@
 A type defining quantities related to a Jastrow factor.
 
 """
-struct Jastrow
+mutable struct Jastrow
     # type of Jastrow parameter
     jastrow_type::String
 
@@ -432,16 +432,16 @@ Updates Jastrow parameters after Stochastic Reconfiguration.
 """
 function update_jastrow!(jastrow::Jastrow, vpars::Vector{Float64})
     # number of Jastrow parameters
-    num_jpars = jastrow.num_jpars
+    num_jpars = jastrow.num_jpars;
 
-    # vector of Jastrow parameters
-    jpars = jastrow.jpars
+    # number of Jastrow parameters
+    jpars = jastrow.jpars;
 
     # map of Jastrow parameters
-    jpar_map = jastrow.jpar_map
+    jpar_map = jastrow.jpar_map;
 
-    # matrix of ALL Jastrow parameters
-    jpar_matrix = jastrow.jpar_map
+    # number of Jastrow parameters
+    jpar_matrix = jastrow.jpar_matrix;
 
     # get the new Jastrow parameters by getting the last num_jpars elements of vpars
     new_jpars = vpars[end-num_jpars+1:end]
@@ -450,8 +450,8 @@ function update_jastrow!(jastrow::Jastrow, vpars::Vector{Float64})
     jpars .= new_jpars
 
     # overwrite jpars in map
-    keys = collect(keys(jpar_map))
-    for (i, key) in enumerate(keys)
+    list_of_keys = collect(keys(jpar_map))
+    for (i, key) in enumerate(list_of_keys)
         jpar_map[key] = new_jpars[i]
     end
 
@@ -475,7 +475,10 @@ Checks floating point error accumulation in the T vector and if ΔT < δT,
 then the recalculated T vector Tᵣ replaces the updated T vector Tᵤ.
 
 """
-function recalc_Tvec(jastrow::Jastrow, δT::Float64)
+function recalc_Tvec!(jastrow::Jastrow, δT::Float64)
+    # Jastrow type
+    jastrow_type = jastrow.jastrow_type
+
     # T vector that has been updated during MC cycles
     Tᵤ = jastrow.Tvec
 
@@ -498,10 +501,14 @@ function recalc_Tvec(jastrow::Jastrow, δT::Float64)
 
     if ΔT > δT
         verbose && println("WARNING! T vector has been recalculated: ΔT = ", ΔT, " > δT = ", δT)
-        return Tᵣ, ΔT
+
+        # record new T vector
+        jastrow.Tvec = Tᵣ
+
+        return nothing
     else
         verbose && println("T vector is stable: ΔT = ", ΔT, " < δT = ", δT)
-        return Tᵤ, ΔT
+        return nothing
     end  
 end
 
